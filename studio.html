@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Studio — SuperPrint</title>
+<meta name="description" content="Generate a one-of-a-kind adult coloring page: choose a style, set the detail level, line weight and paper size, then print or download it.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/print.css" media="print">
+<script>
+  try {
+    var t = localStorage.getItem('superprint.theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="wrap wrap-wide nav-inner">
+    <a class="brand" href="index.html">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+        <path d="M12 2v20M2 12h20M5 5l14 14M19 5 5 19"/>
+      </svg>
+      <b>Super<span>Print</span></b>
+    </a>
+    <nav id="nav-links" class="nav-links" aria-label="Main">
+      <a href="index.html">Home</a>
+      <a href="studio.html">Create</a>
+      <a href="gallery.html">Gallery</a>
+      <a href="saved.html">Saved</a>
+    </nav>
+    <div class="nav-actions">
+      <button class="btn btn-icon" data-theme-toggle type="button" aria-label="Toggle theme"></button>
+      <button class="btn btn-icon nav-toggle" data-nav-toggle type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links"></button>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap wrap-wide">
+  <div class="studio">
+
+    <form class="studio-panel" id="controls" aria-label="Design settings" onsubmit="return false">
+      <div class="field">
+        <div class="field-label"><span>Style</span></div>
+        <div class="style-list" id="style-list" role="group" aria-label="Drawing style"></div>
+      </div>
+
+      <div class="panel-divider"></div>
+
+      <div class="field">
+        <div class="field-label">
+          <label for="seed-input">Seed</label>
+        </div>
+        <div class="seed-row">
+          <input class="input" id="seed-input" type="text" spellcheck="false" autocomplete="off" aria-describedby="seed-help">
+          <button class="btn btn-outline btn-icon" id="seed-shuffle" type="button" aria-label="New random seed" title="New random seed (n)"></button>
+        </div>
+        <p class="small muted" id="seed-help" style="margin:8px 0 0">
+          The seed decides the whole drawing. Same seed, same page — every time.
+        </p>
+      </div>
+
+      <div class="field">
+        <div class="field-label">
+          <label for="complexity">Detail</label>
+          <b id="complexity-label">Balanced</b>
+        </div>
+        <input id="complexity" type="range" min="1" max="5" step="1" value="3">
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span>Paper size</span></div>
+        <div class="seg" id="paper-seg" role="group" aria-label="Paper size"></div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span>Line weight</span></div>
+        <div class="seg" id="weight-seg" role="group" aria-label="Line weight"></div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span>Border</span></div>
+        <div class="seg" id="frame-seg" role="group" aria-label="Border style"></div>
+      </div>
+
+      <div class="panel-divider"></div>
+
+      <div class="field">
+        <label class="switch">
+          <input type="checkbox" id="caption-toggle" checked>
+          <span>Print the seed at the bottom</span>
+        </label>
+      </div>
+    </form>
+
+    <div class="studio-stage">
+      <div class="stage-bar">
+        <button class="btn btn-dark" id="act-surprise" type="button"></button>
+        <button class="btn btn-primary" id="act-print" type="button"></button>
+        <span class="spacer"></span>
+        <button class="btn btn-outline" id="act-save" type="button" aria-pressed="false"></button>
+        <button class="btn btn-outline" id="act-link" type="button"></button>
+        <button class="btn btn-outline" id="act-png" type="button"></button>
+        <button class="btn btn-outline" id="act-svg" type="button"></button>
+      </div>
+
+      <div class="sheet-frame">
+        <div class="sheet" id="sheet" role="img" aria-label="Generated coloring page preview"></div>
+      </div>
+
+      <p class="small muted" id="sheet-meta" aria-live="polite" style="text-align:center;margin:0"></p>
+      <p class="small muted" style="text-align:center;margin:0">
+        Shortcuts: <span class="mono">n</span> new seed · <span class="mono">p</span> print · <span class="mono">s</span> save
+      </p>
+    </div>
+
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap wrap-wide footer-inner">
+    <div>© <span data-year></span> SuperPrint · Line art generated in your browser</div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="index.html">Home</a>
+      <a href="gallery.html">Gallery</a>
+      <a href="saved.html">Saved</a>
+      <a href="https://github.com/misterclarity/SuperPrint">Source</a>
+    </nav>
+  </div>
+</footer>
+
+<script type="module" src="assets/js/ui.js"></script>
+<script type="module" src="assets/js/pages/studio.js"></script>
+</body>
+</html>

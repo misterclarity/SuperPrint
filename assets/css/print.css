@@ -1,0 +1,51 @@
+/*
+ * Print sheet: when `body.is-printing` is set, everything except the injected
+ * #print-root is removed from the page box so the design fills the sheet
+ * edge to edge. Page dimensions are written at print time by export.js.
+ */
+
+@media print {
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body.is-printing > *:not(#print-root) { display: none !important; }
+
+  body.is-printing #print-root {
+    display: block !important;
+    position: static;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body.is-printing #print-root svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: none;
+    max-height: none;
+  }
+
+  /* Anything printed without going through the studio still looks sane. */
+  .nav,
+  .site-footer,
+  .toolbar,
+  .studio-panel,
+  .stage-bar,
+  .toast,
+  .skip-link { display: none !important; }
+
+  .sheet,
+  .sheet-frame {
+    box-shadow: none !important;
+    border: 0 !important;
+    background: #fff !important;
+    padding: 0 !important;
+  }
+
+  a[href]::after { content: '' !important; }
+}

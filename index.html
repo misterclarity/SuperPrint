@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SuperPrint — AI-generated coloring pages for adults</title>
+<meta name="description" content="Endless, original coloring pages for grown-ups. Generate mandalas, stained glass, botanicals and geometric patterns in your browser, then print them free at home.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="SuperPrint — AI-generated coloring pages for adults">
+<meta property="og:description" content="Endless original coloring pages, generated in your browser and printable in one click.">
+<meta property="og:type" content="website">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/print.css" media="print">
+<script>
+  // Applied before first paint so the theme never flashes.
+  try {
+    var t = localStorage.getItem('superprint.theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="index.html">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+        <path d="M12 2v20M2 12h20M5 5l14 14M19 5 5 19"/>
+      </svg>
+      <b>Super<span>Print</span></b>
+    </a>
+    <nav id="nav-links" class="nav-links" aria-label="Main">
+      <a href="index.html">Home</a>
+      <a href="studio.html">Create</a>
+      <a href="gallery.html">Gallery</a>
+      <a href="saved.html">Saved</a>
+    </nav>
+    <div class="nav-actions">
+      <button class="btn btn-icon" data-theme-toggle type="button" aria-label="Toggle theme"></button>
+      <button class="btn btn-icon nav-toggle" data-nav-toggle type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links"></button>
+      <a class="btn btn-primary btn-sm" href="studio.html">Start creating</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">Free · No account · Unlimited</p>
+        <h1>Coloring pages that have <em>never existed</em> before.</h1>
+        <p class="lede">
+          SuperPrint draws original line art the moment you ask for it. Pick a style, nudge a
+          few dials, and print a page nobody else has ever coloured — mandalas, stained glass,
+          botanicals, interlaced ribbons and more, at full print quality.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-primary btn-lg" id="hero-start" href="studio.html">Create a page</a>
+          <button class="btn btn-outline btn-lg" id="hero-shuffle" type="button">Shuffle these</button>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat"><strong>9</strong><span>drawing styles</span></div>
+          <div class="hero-stat"><strong>∞</strong><span>unique designs</span></div>
+          <div class="hero-stat"><strong>300</strong><span>DPI print &amp; vector SVG</span></div>
+        </div>
+      </div>
+      <div class="hero-stack" id="hero-stack" aria-label="Sample generated coloring pages"></div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">The styles</p>
+        <h2>Nine ways to fill a page</h2>
+        <p class="lede">
+          Every style is a different drawing algorithm, not a filter on a stock image. Refresh
+          any of them for a completely new composition.
+        </p>
+      </div>
+      <div class="grid grid-4" id="style-showcase"></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">How it works</p>
+        <h2>Page to paper in about thirty seconds</h2>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <h3>Choose a style</h3>
+          <p>Mandala for symmetry, stained glass for big bold shapes, contour maps for something quieter.</p>
+        </div>
+        <div class="step">
+          <h3>Tune the detail</h3>
+          <p>Five levels of intricacy, three line weights and five paper sizes. Bold lines suit markers and low-vision colouring.</p>
+        </div>
+        <div class="step">
+          <h3>Reroll until it clicks</h3>
+          <p>Every design has a seed. Shuffle for a fresh one, or type a seed back in to bring an old favourite home.</p>
+        </div>
+        <div class="step">
+          <h3>Print or download</h3>
+          <p>Print straight from the browser, or take a 300&nbsp;DPI PNG or an infinitely scalable SVG with you.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Getting a good print</p>
+        <h2>A few things worth knowing</h2>
+      </div>
+      <div class="grid grid-3">
+        <div class="card" style="padding:22px">
+          <h3>Paper matters most</h3>
+          <p class="small muted" style="margin:0">
+            Plain copier paper is fine for pencils. If you like markers or any kind of wet
+            media, 120&nbsp;gsm or heavier cardstock stops the bleed-through.
+          </p>
+        </div>
+        <div class="card" style="padding:22px">
+          <h3>Print at 100%</h3>
+          <p class="small muted" style="margin:0">
+            Turn off “fit to page” and set margins to none. Pages are drawn with a safe margin
+            already, so they land inside any printer's printable area.
+          </p>
+        </div>
+        <div class="card" style="padding:22px">
+          <h3>Grayscale saves ink</h3>
+          <p class="small muted" style="margin:0">
+            The artwork is pure black line on white. Printing in black-and-white or draft mode
+            costs almost nothing and looks identical.
+          </p>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:24px">
+        <div>
+          <strong>Everything happens on your device.</strong>
+          There is no server, no upload and no account. Designs you save live in this browser's
+          local storage, and a design's link contains everything needed to redraw it.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap faq">
+      <div class="section-head center">
+        <p class="eyebrow">Questions</p>
+        <h2>Good to know</h2>
+      </div>
+
+      <details open>
+        <summary>What does “AI generated” mean here?</summary>
+        <p>
+          Each style is a generative drawing model: a set of rules plus a stream of seeded
+          randomness that composes petals, facets, ribbons or contour lines into a finished
+          page. Nothing is retrieved from a library of pre-made images — the artwork is
+          computed on your device the moment you ask for it, which is why the supply is
+          effectively endless and every page is genuinely new.
+        </p>
+      </details>
+
+      <details>
+        <summary>Can I use these commercially?</summary>
+        <p>
+          Yes. Pages you generate are yours to print, share, sell in a colouring book, or hand
+          out at a workshop or care home. No attribution required, though it is always welcome.
+        </p>
+      </details>
+
+      <details>
+        <summary>How do I get the same design back later?</summary>
+        <p>
+          Every page has a seed like <span class="mono">amber-thistle-408</span>. Save the
+          design to your collection, copy its link, or simply write the seed down and type it
+          into the studio again — the same seed and settings always redraw the identical page.
+        </p>
+      </details>
+
+      <details>
+        <summary>Which format should I download?</summary>
+        <p>
+          Print directly from the browser for everyday use. Choose <b>PNG</b> at 300&nbsp;DPI
+          for photo printers and print shops, and <b>SVG</b> if you want to scale the artwork
+          to poster size, edit it in Illustrator or Inkscape, or send it to a cutting machine.
+        </p>
+      </details>
+
+      <details>
+        <summary>Does it work offline?</summary>
+        <p>
+          Once the page has loaded, yes — the generators run entirely in the browser, so you
+          can keep creating and printing without a connection.
+        </p>
+      </details>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="wrap" style="text-align:center">
+      <h2>Pick a style and see what appears.</h2>
+      <p class="lede" style="margin:0 auto 26px">No sign-up, no watermark, no limit.</p>
+      <a class="btn btn-primary btn-lg" href="studio.html">Open the studio</a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div>© <span data-year></span> SuperPrint · Line art generated in your browser</div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="studio.html">Create</a>
+      <a href="gallery.html">Gallery</a>
+      <a href="saved.html">Saved</a>
+      <a href="https://github.com/misterclarity/SuperPrint">Source</a>
+    </nav>
+  </div>
+</footer>
+
+<script type="module" src="assets/js/ui.js"></script>
+<script type="module" src="assets/js/pages/home.js"></script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gallery — SuperPrint</title>
+<meta name="description" content="Browse a fresh batch of AI-generated adult coloring pages. Filter by style, print any page instantly, or open it in the studio to adjust it.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/print.css" media="print">
+<script>
+  try {
+    var t = localStorage.getItem('superprint.theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="wrap wrap-wide nav-inner">
+    <a class="brand" href="index.html">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+        <path d="M12 2v20M2 12h20M5 5l14 14M19 5 5 19"/>
+      </svg>
+      <b>Super<span>Print</span></b>
+    </a>
+    <nav id="nav-links" class="nav-links" aria-label="Main">
+      <a href="index.html">Home</a>
+      <a href="studio.html">Create</a>
+      <a href="gallery.html">Gallery</a>
+      <a href="saved.html">Saved</a>
+    </nav>
+    <div class="nav-actions">
+      <button class="btn btn-icon" data-theme-toggle type="button" aria-label="Toggle theme"></button>
+      <button class="btn btn-icon nav-toggle" data-nav-toggle type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links"></button>
+      <a class="btn btn-primary btn-sm" href="studio.html">Start creating</a>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap wrap-wide">
+  <section style="padding:44px 0 8px">
+    <p class="eyebrow">Gallery</p>
+    <h1 style="margin-bottom:0.25em">A fresh batch, drawn just now</h1>
+    <p class="lede">
+      Nothing here is stored — every page below was generated when you opened this tab, and
+      reloading gives you an entirely different set. Print one straight from its card, or open
+      it in the studio to change the detail, paper or line weight.
+    </p>
+  </section>
+
+  <div class="toolbar">
+    <div class="filters" id="gallery-filters" role="group" aria-label="Filter by style"></div>
+    <button class="btn btn-dark" id="fresh-batch" type="button" style="margin-left:auto"><span>New batch</span></button>
+  </div>
+
+  <div class="grid grid-4" id="gallery-grid"></div>
+
+  <div style="display:flex;justify-content:center;padding:38px 0 64px">
+    <button class="btn btn-outline btn-lg" id="load-more" type="button">Load 12 more</button>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap wrap-wide footer-inner">
+    <div>© <span data-year></span> SuperPrint · Line art generated in your browser</div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="index.html">Home</a>
+      <a href="studio.html">Create</a>
+      <a href="saved.html">Saved</a>
+      <a href="https://github.com/misterclarity/SuperPrint">Source</a>
+    </nav>
+  </div>
+</footer>
+
+<script type="module" src="assets/js/ui.js"></script>
+<script type="module" src="assets/js/pages/gallery.js"></script>
+</body>
+</html>

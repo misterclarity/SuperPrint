@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page not found — SuperPrint</title>
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/style.css">
+<script>
+  try {
+    var t = localStorage.getItem('superprint.theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<main class="wrap" style="min-height:100vh;display:grid;place-content:center;text-align:center;gap:8px">
+  <p class="eyebrow">404</p>
+  <h1 style="margin-bottom:0.2em">This page was never drawn.</h1>
+  <p class="lede" style="margin:0 auto 24px">The link may be old, or the seed may have wandered off.</p>
+  <div class="btn-row" style="justify-content:center">
+    <a class="btn btn-primary btn-lg" href="index.html">Back to the start</a>
+    <a class="btn btn-outline btn-lg" href="studio.html">Open the studio</a>
+  </div>
+</main>
+</body>
+</html>

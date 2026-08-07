@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saved designs — SuperPrint</title>
+<meta name="description" content="Your saved SuperPrint coloring pages, kept privately in this browser and ready to reprint any time.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/print.css" media="print">
+<script>
+  try {
+    var t = localStorage.getItem('superprint.theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="wrap wrap-wide nav-inner">
+    <a class="brand" href="index.html">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+        <path d="M12 2v20M2 12h20M5 5l14 14M19 5 5 19"/>
+      </svg>
+      <b>Super<span>Print</span></b>
+    </a>
+    <nav id="nav-links" class="nav-links" aria-label="Main">
+      <a href="index.html">Home</a>
+      <a href="studio.html">Create</a>
+      <a href="gallery.html">Gallery</a>
+      <a href="saved.html">Saved</a>
+    </nav>
+    <div class="nav-actions">
+      <button class="btn btn-icon" data-theme-toggle type="button" aria-label="Toggle theme"></button>
+      <button class="btn btn-icon nav-toggle" data-nav-toggle type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links"></button>
+      <a class="btn btn-primary btn-sm" href="studio.html">Start creating</a>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap wrap-wide">
+  <section style="padding:44px 0 8px">
+    <p class="eyebrow">Your collection</p>
+    <h1 style="margin-bottom:0.25em">Saved designs</h1>
+    <p class="lede">
+      Saved pages are stored in this browser only — nothing is uploaded anywhere. Each one is
+      redrawn from its seed when you open this page, so it stays pin-sharp at any size.
+    </p>
+    <p class="small muted" id="saved-count" aria-live="polite"></p>
+  </section>
+
+  <div class="toolbar">
+    <button class="btn btn-outline" id="clear-saved" type="button" hidden><span>Clear collection</span></button>
+  </div>
+
+  <div class="grid grid-4" id="saved-grid" hidden></div>
+
+  <div class="empty" id="saved-empty" hidden>
+    <h3>Nothing saved yet</h3>
+    <p style="max-width:44ch;margin:0 auto 20px">
+      Tap the heart on any design in the studio or the gallery and it will wait for you here.
+    </p>
+    <div class="btn-row" style="justify-content:center">
+      <a class="btn btn-primary" href="studio.html">Create a page</a>
+      <a class="btn btn-outline" href="gallery.html">Browse the gallery</a>
+    </div>
+  </div>
+
+  <div style="height:64px"></div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap wrap-wide footer-inner">
+    <div>© <span data-year></span> SuperPrint · Line art generated in your browser</div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="index.html">Home</a>
+      <a href="studio.html">Create</a>
+      <a href="gallery.html">Gallery</a>
+      <a href="https://github.com/misterclarity/SuperPrint">Source</a>
+    </nav>
+  </div>
+</footer>
+
+<script type="module" src="assets/js/ui.js"></script>
+<script type="module" src="assets/js/pages/saved.js"></script>
+</body>
+</html>

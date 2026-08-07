@@ -1,0 +1,12 @@
+{
+  "name": "superprint",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Generative coloring pages for adults — a static site with no build step and no dependencies.",
+  "type": "module",
+  "scripts": {
+    "serve": "python3 -m http.server 8080",
+    "test": "node tests/run.mjs"
+  },
+  "license": "MIT"
+}

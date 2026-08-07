@@ -1,0 +1,95 @@
+# SuperPrint
+
+Generative coloring pages for adults, drawn in the browser and printable at home.
+
+Every page is computed on demand from a seed — nothing is fetched from a library of
+pre-made images, so the supply is effectively endless and no two pages are alike. The
+whole site is static files with **no build step and no dependencies**, which makes it a
+drop-in fit for GitHub Pages.
+
+## Features
+
+- **Nine drawing styles** — Mandala, Kaleidoscope, Stained Glass, Botanical Wreath,
+  Bloom Field, Geometric Tiles, Celtic Weave, Pattern Bands and Contour Map.
+- **Reproducible seeds.** A design is a pure function of `(style, seed, settings)`, so the
+  same inputs always redraw the identical page. Seeds are human-readable
+  (`amber-thistle-408`) and every design's URL carries its full recipe.
+- **Print-ready output.** Print straight from the browser, export a 300 DPI PNG, or take
+  the vector SVG for poster-size printing, Illustrator/Inkscape or a cutting machine.
+- **Five paper sizes** (US Letter and A4 in both orientations, plus square), three line
+  weights — the bold setting is aimed at markers and low-vision colouring — and four
+  border treatments.
+- **Private by design.** No server, no accounts, no analytics, no network calls after the
+  page loads. Saved designs live in `localStorage`. It works offline.
+- Light and dark themes, keyboard shortcuts, and responsive layouts down to phone width.
+
+## Running locally
+
+Any static file server will do — ES modules need `http://`, so opening `index.html`
+straight off the filesystem will not work.
+
+```bash
+npm run serve      # python3 -m http.server 8080
+# then open http://localhost:8080
+```
+
+## Tests
+
+```bash
+npm test
+```
+
+Two suites, both plain Node with no test framework:
+
+- `tests/generators.test.mjs` — renders every style across all complexity levels, paper
+  sizes, line weights and borders, asserting well-formed SVG, no `NaN`/`undefined` in the
+  output, a sane amount of linework, and byte-identical results for identical inputs.
+- `tests/bounds.test.mjs` — asserts no artwork strays off the sheet. Off-page geometry is
+  invisible on screen because the SVG clips it, but shows up as clipped or crossing lines
+  on paper.
+
+## Deploying to GitHub Pages
+
+`.github/workflows/pages.yml` runs the tests and then publishes the repository root on
+every push to `main`. To turn it on: **Settings → Pages → Build and deployment →
+Source: GitHub Actions**.
+
+Because the site is static, you can equally serve it from a `gh-pages` branch or the
+`main` branch root — `.nojekyll` is present so Jekyll leaves the files alone. All paths
+are relative, so it works from a project subpath (`user.github.io/SuperPrint/`) as well as
+from a custom domain.
+
+## How it works
+
+```
+index.html  studio.html  gallery.html  saved.html      pages
+assets/js/core/   rng · sketch · shapes · render · export · store
+assets/js/gen/    one module per drawing style
+assets/js/pages/  per-page controllers
+```
+
+A generator receives a seeded RNG and a content box, and appends SVG markup to a
+`Sketch`. It never touches the DOM, which is what lets the identical code path drive the
+on-screen preview, the gallery thumbnails, the downloads and the print sheet — what you
+see really is what prints.
+
+Adding a style means writing one module with `{ id, name, blurb, tags, draw(sk, ctx) }`
+and listing it in `assets/js/gen/index.js`; everything else (studio controls, gallery
+filters, exports, saving) picks it up automatically.
+
+Notes on a few of the algorithms:
+
+- **Stained Glass** subdivides the page recursively, always cutting across each cell's
+  longest axis so the tessellation cannot shed thin slivers, then insets each convex pane
+  to form the lead came.
+- **Celtic Weave** is a Truchet tiling where every tile connects the midpoints of all four
+  edges, so any random tile assignment still yields continuous ribbons; crossings get an
+  over/under break.
+- **Contour Map** samples a field of Gaussian peaks and traces it with marching squares,
+  picking levels at quantiles rather than even heights so the lines spread evenly instead
+  of bunching on the steep slopes.
+
+## Licence
+
+MIT — see [LICENSE](LICENSE). Pages you generate are yours to use freely, including
+commercially.
