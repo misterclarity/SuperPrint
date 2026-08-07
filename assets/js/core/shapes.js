@@ -1,6 +1,7 @@
 /* Reusable botanical + decorative motifs shared across generators. */
 
 import { TAU, f, polar, smooth, poly, lerp } from './util.js';
+import { Sketch } from './sketch.js';
 
 /**
  * Pointed leaf with a midrib and optional veins.
@@ -206,6 +207,137 @@ export function radialCorners(sk, box, R, rng) {
   if (gap < box.w * 0.13) return;
   const size = Math.min(gap * 0.62, box.w * 0.19);
   for (const [x, y, a] of corners) cornerOrnament(sk, x, y, size, a, rng);
+}
+
+/** Regular hexagon with a vertex pointing along +x (aligned to snowflake arms). */
+export function hexagon(sk, cx, cy, r, weight = 1) {
+  sk.poly(Array.from({ length: 6 }, (_, i) => polar(cx, cy, r, (i / 6) * TAU)), true, sk.w(weight));
+}
+
+/**
+ * One sixth of a snowflake, drawn along +x from the origin.
+ *
+ * `fine` is the arm length measured in line widths. Detail is gated on it:
+ * branches and spurs that read beautifully on a large crystal merge into a
+ * solid blot on a small one, so small flakes get simpler forms.
+ */
+function snowArm(sk, r, rc, kind, rng, fine) {
+  if (kind === 'simple') {
+    sk.line(rc, 0, r, 0);
+    const x = lerp(rc, r, 0.55);
+    const len = (r - x) * 0.85;
+    for (const s of [-1, 1]) {
+      sk.line(x, 0, x + Math.cos(Math.PI / 3) * len, s * Math.sin(Math.PI / 3) * len, sk.w(0.85));
+    }
+    return;
+  }
+
+  if (kind === 'stellar') {
+    // Broad blade arms: closed shapes, so there is something to colour in.
+    const w = r * rng.range(0.075, 0.115);
+    const blade = [
+      { x: rc, y: w * 0.62 },
+      { x: r * 0.7, y: w },
+      { x: r, y: 0 },
+      { x: r * 0.7, y: -w },
+      { x: rc, y: -w * 0.62 },
+    ];
+    sk.poly(blade, true);
+    if (fine > 18) sk.poly(blade.map((p) => ({ x: lerp(r * 0.55, p.x, 0.6), y: p.y * 0.45 })), true, sk.w(0.7));
+
+    // Side spurs: small diamonds at the crystal's natural 60°.
+    const spurs = fine > 20 ? rng.int(1, 2) : 1;
+    for (let i = 0; i < spurs; i++) {
+      const t = rng.range(0.4, 0.72);
+      const base = { x: lerp(rc, r, t), y: 0 };
+      const len = r * rng.range(0.16, 0.26);
+      for (const s of [-1, 1]) {
+        const dx = Math.cos(Math.PI / 3);
+        const dy = s * Math.sin(Math.PI / 3);
+        const tip = { x: base.x + dx * len, y: base.y + dy * len };
+        const mid = { x: base.x + dx * len * 0.5, y: base.y + dy * len * 0.5 };
+        const off = len * 0.2;
+        sk.poly([base, { x: mid.x - dy * off, y: mid.y + dx * off }, tip, { x: mid.x + dy * off, y: mid.y - dx * off }], true, sk.w(0.85));
+      }
+    }
+    return;
+  }
+
+  if (kind === 'plate') {
+    // Sectored plate: a spoke with a diamond and a chevron near the tip.
+    sk.line(rc, 0, r, 0);
+    const d = r * 0.1;
+    const at = r * rng.range(0.5, 0.66);
+    sk.poly([{ x: at - d, y: 0 }, { x: at, y: -d }, { x: at + d, y: 0 }, { x: at, y: d }], true, sk.w(0.85));
+    const tip = r * 0.88;
+    for (const s of [-1, 1]) {
+      sk.line(tip, 0, tip - r * 0.1, s * r * 0.1, sk.w(0.8));
+    }
+    return;
+  }
+
+  // Dendrite: a shaft with paired branches at 60°, each with optional spurs.
+  sk.line(rc, 0, r, 0);
+  const branches = fine > 22 ? rng.int(2, 4) : 2;
+  for (let i = 0; i < branches; i++) {
+    const t = lerp(0.26, 0.84, (i + 0.5) / branches);
+    const x = lerp(rc, r, t);
+    const len = (r - x) * rng.range(0.6, 0.95);
+    const dx = Math.cos(Math.PI / 3) * len;
+    const dy = Math.sin(Math.PI / 3) * len;
+    for (const s of [-1, 1]) {
+      const end = { x: x + dx, y: s * dy };
+      sk.line(x, 0, end.x, end.y, sk.w(0.85));
+      if (fine > 26 && len > r * 0.2 && rng.bool(0.55)) {
+        const q = { x: x + dx * 0.55, y: s * dy * 0.55 };
+        sk.line(q.x, q.y, q.x + len * 0.34, q.y, sk.w(0.7));
+      }
+    }
+  }
+  // Tip fork.
+  for (const s of [-1, 1]) {
+    sk.line(r, 0, r - r * 0.13, s * r * 0.11, sk.w(0.8));
+  }
+}
+
+/**
+ * Six-fold snowflake. One arm is built once and re-emitted as six rotations,
+ * which is both faster and the reason the crystal is exactly symmetric.
+ */
+export function snowflake(sk, cx, cy, r, rng) {
+  // Arm length in line widths — the budget for how much detail can be legible.
+  const fine = r / sk.stroke;
+  let kind;
+  if (fine < 12) kind = 'simple';
+  else if (fine < 20) kind = rng.pick(['simple', 'plate', 'dendrite']);
+  else kind = rng.pick(['dendrite', 'dendrite', 'stellar', 'plate']);
+
+  const rc = r * rng.range(0.13, 0.2);
+
+  const arm = new Sketch({ width: sk.width, height: sk.height, stroke: sk.stroke });
+  snowArm(arm, r, rc, kind, rng, fine);
+  const content = arm.parts.join('');
+  for (let i = 0; i < 6; i++) {
+    sk.open(`translate(${f(cx)} ${f(cy)}) rotate(${f(i * 60)})`).raw(content).close();
+  }
+
+  if (kind === 'plate') {
+    hexagon(sk, cx, cy, r * 0.92, 1);
+    if (fine > 14) hexagon(sk, cx, cy, r * 0.62, 0.8);
+  }
+  hexagon(sk, cx, cy, rc);
+  if (fine > 18 && rng.bool(0.6)) hexagon(sk, cx, cy, rc * 0.5, 0.75);
+}
+
+/** Tiny six-armed sparkle for filling gaps between snowflakes. */
+export function sparkle(sk, cx, cy, r, rng) {
+  const arms = rng.bool(0.5) ? 6 : 4;
+  for (let i = 0; i < arms; i++) {
+    const a = (i / arms) * TAU;
+    const p = polar(cx, cy, r, a);
+    sk.line(cx, cy, p.x, p.y, sk.w(0.75));
+  }
+  if (r > 6 && rng.bool(0.5)) hexagon(sk, cx, cy, r * 0.34, 0.65);
 }
 
 /** Evenly spaced dots along a straight run. */

@@ -40,20 +40,58 @@ export default {
     const midCount = 4 + complexity * 3;
     const mids = scatter(rng, box, midCount, unit * 0.055, unit * 0.09, placed);
 
-    // Stems connecting nearby blooms give the field some structure.
+    // Stems joining nearby blooms. Each one is trimmed back to the edge of the
+    // two blooms it connects and dropped entirely if it would cross anything
+    // else, so a stem never runs through a shape. Accepted stems are then
+    // reserved so later fillers cannot land on top of them either.
+    const reserved = [];
     for (const b of bigs) {
       const near = mids
         .map((m) => ({ m, d: dist(b, m) }))
         .filter((o) => o.d < unit * 0.42)
         .sort((a, z) => a.d - z.d)
         .slice(0, 2);
+
       for (const { m } of near) {
-        const mid = { x: (b.x + m.x) / 2 + rng.range(-unit * 0.06, unit * 0.06), y: (b.y + m.y) / 2 + rng.range(-unit * 0.06, unit * 0.06) };
-        sk.path(smooth([b, mid, m]), sk.w(0.9));
-        const ang = Math.atan2(m.y - mid.y, m.x - mid.x);
-        leaf(sk, mid.x, mid.y, unit * 0.05, 0.22, ang + rng.sign() * 1.2, { veins: 1 });
+        const bow = {
+          x: (b.x + m.x) / 2 + rng.range(-unit * 0.06, unit * 0.06),
+          y: (b.y + m.y) / 2 + rng.range(-unit * 0.06, unit * 0.06),
+        };
+        // Control point placed so the quadratic passes through `bow` at t=0.5.
+        const ctrl = { x: 2 * bow.x - (b.x + m.x) / 2, y: 2 * bow.y - (b.y + m.y) / 2 };
+
+        const path = [];
+        for (let i = 0; i <= 28; i++) {
+          const t = i / 28;
+          const p = {
+            x: (1 - t) * (1 - t) * b.x + 2 * (1 - t) * t * ctrl.x + t * t * m.x,
+            y: (1 - t) * (1 - t) * b.y + 2 * (1 - t) * t * ctrl.y + t * t * m.y,
+          };
+          // Tuck the ends under the two blooms rather than across them.
+          if (dist(p, b) < b.r * 1.02 || dist(p, m) < m.r * 1.02) continue;
+          path.push(p);
+        }
+        if (path.length < 4) continue;
+        // A stem trimmed down to a stub reads as a stray mark, not a stem.
+        let span = 0;
+        for (let i = 1; i < path.length; i++) span += dist(path[i - 1], path[i]);
+        if (span < unit * 0.09) continue;
+        if (path.some((p) => placed.some((q) => q !== b && q !== m && dist(p, q) < q.r))) continue;
+
+        sk.path(smooth(path), sk.w(0.9));
+        for (const p of path) reserved.push({ x: p.x, y: p.y, r: unit * 0.012 });
+
+        const anchor = path[Math.floor(path.length / 2)];
+        const len = unit * 0.05;
+        const ang = Math.atan2(m.y - anchor.y, m.x - anchor.x) + rng.sign() * 1.2;
+        const tip = { x: anchor.x + Math.cos(ang) * len, y: anchor.y + Math.sin(ang) * len };
+        if (placed.every((q) => q === b || q === m || dist(tip, q) > q.r + len * 0.3)) {
+          leaf(sk, anchor.x, anchor.y, len, 0.22, ang, { veins: 1 });
+          reserved.push({ x: (anchor.x + tip.x) / 2, y: (anchor.y + tip.y) / 2, r: len * 0.55 });
+        }
       }
     }
+    placed.push(...reserved);
 
     for (const b of bigs) {
       flower(sk, b.x, b.y, b.r, rng.pick([5, 6, 7, 8]), { rounded: rng.bool(0.65) });

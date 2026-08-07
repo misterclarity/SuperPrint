@@ -9,8 +9,9 @@ drop-in fit for GitHub Pages.
 
 ## Features
 
-- **Nine drawing styles** — Mandala, Kaleidoscope, Stained Glass, Botanical Wreath,
-  Bloom Field, Geometric Tiles, Celtic Weave, Pattern Bands and Contour Map.
+- **Eleven drawing styles** — Mandala, Kaleidoscope, Stained Glass, Botanical Wreath,
+  Bloom Field, Frost Field, Folk Weave, Geometric Tiles, Celtic Weave, Pattern Bands and
+  Contour Map.
 - **Reproducible seeds.** A design is a pure function of `(style, seed, settings)`, so the
   same inputs always redraw the identical page. Seeds are human-readable
   (`amber-thistle-408`) and every design's URL carries its full recipe.
@@ -88,6 +89,13 @@ Notes on a few of the algorithms:
 - **Contour Map** samples a field of Gaussian peaks and traces it with marching squares,
   picking levels at quantiles rather than even heights so the lines spread evenly instead
   of bunching on the steep slopes.
+- **Folk Weave** works in the shared grammar of counted-thread textiles — kilim, Andean
+  pallay, Nordic knitting, cross-stitch, sashiko — rather than copying any one tradition's
+  patterns: motifs composed on a lattice, mirrored, and stacked into bands between guard
+  stripes.
+- **Frost Field** and **Bloom Field** both scatter by rejection sampling, largest shapes
+  first. Frost Field scales each crystal's detail to its radius in line widths, because
+  branching that reads beautifully at full size turns into a blot when small.
 
 ## Licence
 
