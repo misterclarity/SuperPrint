@@ -160,6 +160,21 @@ img, svg { max-width: 100%; }
 .brand b { font-weight: 600; }
 .brand span { color: var(--accent); }
 
+/*
+ * Header mark — same bloom as the favicon, but themed. Pale petals are filled
+ * with the page surface rather than left hollow so they occlude the petals
+ * behind them, exactly as in the icon.
+ */
+.mark path {
+  fill: var(--surface);
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.mark path.is-filled { fill: var(--accent); }
+.mark circle { fill: currentColor; stroke: none; }
+.mark circle.is-eye { fill: var(--surface); }
+
 .nav-links { display: flex; align-items: center; gap: 4px; }
 
 .nav-links a {
