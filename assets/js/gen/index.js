@@ -7,6 +7,7 @@ import geometric from './geometric.js';
 import stainedglass from './stainedglass.js';
 import celtic from './celtic.js';
 import folkweave from './folkweave.js';
+import glyphstela from './glyphstela.js';
 import bands from './bands.js';
 import contours from './contours.js';
 
@@ -18,6 +19,7 @@ export const STYLES = [
   bloomfield,
   frostfield,
   folkweave,
+  glyphstela,
   geometric,
   celtic,
   bands,

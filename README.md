@@ -9,9 +9,9 @@ drop-in fit for GitHub Pages.
 
 ## Features
 
-- **Eleven drawing styles** — Mandala, Kaleidoscope, Stained Glass, Botanical Wreath,
-  Bloom Field, Frost Field, Folk Weave, Geometric Tiles, Celtic Weave, Pattern Bands and
-  Contour Map.
+- **Twelve drawing styles** — Mandala, Kaleidoscope, Stained Glass, Botanical Wreath,
+  Bloom Field, Frost Field, Folk Weave, Glyph Stela, Geometric Tiles, Celtic Weave,
+  Pattern Bands and Contour Map.
 - **Reproducible seeds.** A design is a pure function of `(style, seed, settings)`, so the
   same inputs always redraw the identical page. Seeds are human-readable
   (`amber-thistle-408`) and every design's URL carries its full recipe.
@@ -96,6 +96,18 @@ Notes on a few of the algorithms:
 - **Frost Field** and **Bloom Field** both scatter by rejection sampling, largest shapes
   first. Frost Field scales each crystal's detail to its radius in line widths, because
   branching that reads beautifully at full size turns into a blot when small.
+- **Glyph Stela** reproduces the *structure* of Classic Maya inscriptions and fills it
+  with invented signs. **These are not real Maya glyphs and they spell nothing** — Maya
+  script is a living heritage with a largely deciphered vocabulary, so inventing readable
+  text would be a forgery and freehand "hieroglyphic-looking" doodles would be a
+  caricature. What the generator follows is the documented grammar: glyph blocks square
+  in outline but with rounded corners; one large main sign per block plus narrow affixes
+  (roughly 2:1–3:1) in the superfix, prefix, postfix and subfix slots; main signs in
+  either abstract or head-variant (profile) form; blocks laid out in paired columns,
+  which read in a zigzag A1→B1→A2→B2; bar-and-dot coefficients (dot 1, bar 5, shell 0)
+  attached as prefixes; and day signs set in a pedestalled cartouche. Sign interiors are
+  assembled from the formal vocabulary the catalogues describe — enclosing outlines,
+  crossed bands, scroll volutes, dotted bands, brackets, hatching and spots.
 
 ## Licence
 
