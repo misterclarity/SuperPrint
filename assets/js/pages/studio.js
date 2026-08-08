@@ -19,6 +19,7 @@ const els = {
   frame: document.getElementById('frame-seg'),
   caption: document.getElementById('caption-toggle'),
   meta: document.getElementById('sheet-meta'),
+  stage: document.querySelector('.studio-stage'),
   surprise: document.getElementById('act-surprise'),
   print: document.getElementById('act-print'),
   png: document.getElementById('act-png'),
@@ -49,11 +50,25 @@ function countLines(svg) {
   return (svg.match(/<(path|circle|ellipse|line|rect|polyline)\b/g) || []).length - 1; // minus the page rect
 }
 
+/**
+ * Publish how much of the viewport the pinned preview occupies, so the
+ * stylesheet can keep controls from being scrolled underneath it. Zero when the
+ * stage is not pinned (desktop, and short landscape viewports).
+ */
+function syncPinnedHeight() {
+  const pinned = getComputedStyle(els.stage).position === 'sticky'
+    ? document.querySelector('.nav').offsetHeight + els.stage.offsetHeight
+    : 0;
+  document.documentElement.style.setProperty('--pinned-h', `${Math.round(pinned)}px`);
+}
+
 function render() {
   const page = PAPERS[params.paper];
   const svg = buildSVG(params);
-  els.sheet.style.aspectRatio = `${page.w} / ${page.h}`;
-  els.sheet.style.width = `min(100%, calc(min(74vh, 880px) * ${page.w / page.h}))`;
+  // Publish the paper's proportions; the stylesheet decides how much height
+  // the preview may claim, which differs between desktop and a pinned phone
+  // layout.
+  els.sheet.style.setProperty('--sheet-num', String(page.w / page.h));
   els.sheet.innerHTML = svg;
 
   const n = countLines(svg);
@@ -61,6 +76,7 @@ function render() {
   document.title = `${getStyle(params.style).name} — ${params.seed} · SuperPrint`;
   paintSave();
   syncURL();
+  syncPinnedHeight(); // the preview's height changes with the paper size
 }
 
 function schedule() {
@@ -203,4 +219,6 @@ if (els.sheet) {
   buildSegment(els.frame, Object.values(FRAMES), 'frame');
   wire();
   render();
+  window.addEventListener('resize', syncPinnedHeight);
+  window.addEventListener('orientationchange', syncPinnedHeight);
 }

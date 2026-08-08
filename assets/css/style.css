@@ -335,7 +335,14 @@ img, svg { max-width: 100%; }
 
 @media (max-width: 900px) {
   .hero-grid { grid-template-columns: 1fr; }
-  .hero-stack { max-width: 440px; margin: 8px auto 0; }
+  /* Needs an explicit width: the auto side margins stop the grid item from
+     stretching, and every sheet inside is absolutely positioned, so
+     shrink-to-fit would collapse it to nothing. */
+  .hero-stack { width: 100%; max-width: 440px; margin: 8px auto 0; }
+
+  /* The stack's sheets are rotated out past their box by design; contain that
+     here so it cannot become a horizontal page scroll. */
+  .hero { overflow-x: hidden; overflow-x: clip; }
 }
 
 /* -------------------------------------------------------------- section -- */
@@ -395,19 +402,17 @@ img, svg { max-width: 100%; }
   padding: 28px 0 64px;
 }
 
-@media (max-width: 1000px) {
-  .studio { grid-template-columns: 1fr; }
-  .studio-panel { position: static !important; order: 2; }
-  .studio-stage { order: 1; }
-}
 
 .studio-panel {
+  /* The full-bleed divider mirrors this, so they must not drift apart. */
+  --panel-pad: 20px;
   position: sticky;
   top: calc(var(--nav-h) + 18px);
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: var(--panel-pad);
   box-shadow: var(--shadow-sm);
   max-height: calc(100vh - var(--nav-h) - 36px);
   overflow-y: auto;
@@ -430,7 +435,7 @@ img, svg { max-width: 100%; }
 }
 .field-label b { font-size: 0.84rem; letter-spacing: 0; text-transform: none; color: var(--ink); font-weight: 560; }
 
-.style-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+.style-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
 
 .style-opt {
   display: flex;
@@ -448,6 +453,7 @@ img, svg { max-width: 100%; }
   cursor: pointer;
   transition: border-color 0.14s, background 0.14s;
 }
+.style-opt { overflow-wrap: anywhere; }
 .style-opt:hover { border-color: var(--line-strong); }
 .style-opt[aria-pressed='true'] {
   border-color: var(--ink);
@@ -499,7 +505,7 @@ input[type='range'] {
 .switch { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.9rem; }
 .switch input { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
 
-.panel-divider { height: 1px; background: var(--line); margin: 20px -20px; }
+.panel-divider { height: 1px; background: var(--line); margin: 20px calc(var(--panel-pad) * -1); }
 
 /* stage */
 
@@ -530,10 +536,94 @@ input[type='range'] {
   border-radius: 3px;
   overflow: hidden;
   max-width: 100%;
-  max-height: min(74vh, 900px);
 }
 .sheet svg { display: block; width: 100%; height: 100%; }
 .sheet.is-busy { opacity: 0.45; }
+
+/*
+ * The studio preview is sized entirely in CSS so media queries own the height
+ * budget; studio.js only publishes the paper's width/height ratio as
+ * --sheet-num. Scoped to .sheet-frame so the hero's absolutely-positioned
+ * sheets keep their own sizing.
+ */
+.sheet-frame .sheet {
+  --sheet-h: min(74vh, 880px);
+  --sheet-num: 0.773;
+  aspect-ratio: var(--sheet-num);
+  width: min(100%, calc(var(--sheet-h) * var(--sheet-num)));
+}
+
+/*
+ * Below the two-column breakpoint the preview is pinned to the top of the
+ * viewport and the controls scroll underneath it. Stacking them instead would
+ * mean scrolling up to see the effect of every setting you change, which is
+ * the whole interaction on this page.
+ */
+@media (max-width: 1000px) {
+  .studio {
+    display: flex;
+    flex-direction: column;
+    /* The grid layout's `start` would leave the panel sized to its content,
+       which overflows narrow phones. */
+    align-items: stretch;
+    gap: 14px;
+    padding: 14px 0 52px;
+  }
+
+  .studio-stage {
+    order: -1;
+    position: sticky;
+    top: var(--nav-h);
+    z-index: 20;
+    gap: 10px;
+    /* Padding is inside the pinned box, so it holds the bar clear of the
+       translucent nav instead of letting it graze the underside. */
+    padding-top: 8px;
+    padding-bottom: 10px;
+    background: var(--paper);
+  }
+  /* Fade the controls out from under the pinned preview. */
+  .studio-stage::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 16px;
+    transform: translateY(100%);
+    background: linear-gradient(var(--paper), transparent);
+    pointer-events: none;
+  }
+
+  .studio-panel {
+    --panel-pad: 16px;
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .sheet-frame {
+    padding: 10px;
+    min-height: 0;
+    border-radius: var(--radius);
+  }
+  .sheet-frame .sheet {
+    --sheet-h: 40vh;
+    --sheet-h: 40dvh;
+  }
+
+  .studio-shortcuts { display: none; }
+
+  /*
+   * Anything scrolled into view — a tabbed-to control, a focused field — must
+   * clear the pinned preview, or the browser parks it underneath where it
+   * cannot be clicked. --pinned-h is measured by studio.js.
+   */
+  .studio-panel button,
+  .studio-panel input,
+  .studio-panel label,
+  .studio-panel .field { scroll-margin-top: calc(var(--pinned-h, 0px) + 12px); }
+}
 
 /* --------------------------------------------------------------- steps -- */
 
@@ -654,6 +744,83 @@ input[type='range'] {
 }
 .callout strong { display: block; margin-bottom: 2px; }
 
+.push-end { margin-left: auto; }
+
+/* -------------------------------------------------------------- mobile -- */
+
+@media (max-width: 720px) {
+  .wrap { padding: 0 16px; }
+
+  /* A phone has to fund the pinned preview and a usable control window out of
+     the same screen, so the preview takes a smaller share here. */
+  .sheet-frame .sheet {
+    --sheet-h: 34vh;
+    --sheet-h: 34dvh;
+  }
+
+  /* Keep the live region for screen readers, but stop it costing a line. */
+  #sheet-meta {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  /*
+   * Fit the six actions on one row: the icon carries the meaning for
+   * surprise/save/link, while PNG and SVG need their labels to be told apart
+   * (both would otherwise be a bare download arrow).
+   */
+  .stage-bar { gap: 6px; }
+  .stage-bar .spacer { display: none; }
+  .stage-bar .btn { padding: 9px; font-size: 0.84rem; }
+  #act-surprise span,
+  #act-save span,
+  #act-link span { display: none; }
+  #act-png svg,
+  #act-svg svg { display: none; }
+  #act-surprise,
+  #act-save,
+  #act-link { min-width: 42px; justify-content: center; }
+
+  /* One scrollable row of chips beats six stacked rows of them. */
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .filters::-webkit-scrollbar { display: none; }
+  .filter { flex: none; }
+  .push-end { margin-left: 0; }
+
+  /* iOS zooms the page when a focused field is under 16px. */
+  .input { font-size: 16px; }
+
+  .hero-stats { gap: 18px; }
+  .footer-inner { flex-direction: column; align-items: flex-start; gap: 12px; }
+}
+
+/* Touch targets: 44px is the smallest comfortable tap area. */
+@media (pointer: coarse) {
+  .btn { min-height: 42px; }
+  .btn-icon { width: 44px; height: 44px; }
+  .seg button,
+  .style-opt { min-height: 44px; }
+  .filter { min-height: 40px; }
+  .nav-links a { min-height: 44px; display: flex; align-items: center; }
+  input[type='range'] { height: 38px; }
+  .switch input { width: 20px; height: 20px; }
+}
+
+
 .site-footer {
   border-top: 1px solid var(--line);
   padding: 40px 0 56px;
@@ -677,3 +844,39 @@ input[type='range'] {
 }
 
 #print-root { display: none; }
+
+/*
+ * Short viewports (landscape phones) have no vertical room to stack a pinned
+ * preview above the controls — but they have width to spare, so put the two
+ * side by side instead. Both columns stay in view, the panel scrolls itself.
+ */
+@media (max-width: 1000px) and (max-height: 560px) {
+  .studio {
+    display: grid;
+    grid-template-columns: minmax(0, 262px) minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px 0 16px;
+    align-items: start;
+  }
+  /* Two columns in a panel this narrow would break style names mid-word. */
+  .style-list { grid-template-columns: minmax(0, 1fr); }
+  .studio-panel {
+    position: sticky;
+    top: calc(var(--nav-h) + 8px);
+    max-height: calc(100vh - var(--nav-h) - 24px);
+    max-height: calc(100dvh - var(--nav-h) - 24px);
+    overflow-y: auto;
+  }
+  .studio-stage {
+    order: 0;
+    position: sticky;
+    top: calc(var(--nav-h) + 8px);
+    padding-bottom: 0;
+    background: none;
+  }
+  .studio-stage::after { display: none; }
+  .sheet-frame .sheet {
+    --sheet-h: 58vh;
+    --sheet-h: 58dvh;
+  }
+}

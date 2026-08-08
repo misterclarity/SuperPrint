@@ -22,7 +22,11 @@ drop-in fit for GitHub Pages.
   border treatments.
 - **Private by design.** No server, no accounts, no analytics, no network calls after the
   page loads. Saved designs live in `localStorage`. It works offline.
-- Light and dark themes, keyboard shortcuts, and responsive layouts down to phone width.
+- **Built for phones too.** On a narrow screen the studio pins the preview to the top of
+  the viewport and scrolls the controls beneath it, so every setting you change stays
+  visible — no scrolling back and forth between the dials and the design. Landscape phones
+  get a side-by-side layout instead, where there is width but no height to spare.
+- Light and dark themes, keyboard shortcuts, and layouts that hold together from 320px up.
 
 ## Running locally
 
