@@ -520,6 +520,7 @@ input[type='range'] {
 .stage-bar .spacer { margin-left: auto; }
 
 .sheet-frame {
+  position: relative;
   display: grid;
   place-items: center;
   padding: clamp(14px, 3vw, 34px);
@@ -527,6 +528,39 @@ input[type='range'] {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   min-height: 320px;
+}
+
+/* Expand-to-full-screen affordances; only shown in the compact layout. */
+.zoom-hint,
+.zoom-close { display: none; }
+
+.zoom-hint {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 5px 6px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  line-height: 0;
+  pointer-events: none;
+}
+
+.zoom-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
 }
 
 .sheet {
@@ -613,6 +647,46 @@ input[type='range'] {
   }
 
   .studio-shortcuts { display: none; }
+
+  /*
+   * Tap the preview to fill the screen with it; tap anywhere to come back.
+   * The pinned preview has to be small enough to leave room for the controls,
+   * so this is how you actually inspect a design's detail on a phone.
+   */
+  .sheet-frame { cursor: zoom-in; }
+  .zoom-hint { display: block; }
+
+  body.is-zoomed { overflow: hidden; }
+
+  /*
+   * The stage is a sticky, z-indexed element, so it forms a stacking context
+   * and the overlay's own z-index cannot escape it — without this the
+   * full-screen preview is painted beneath the navigation bar.
+   */
+  body.is-zoomed .studio-stage { z-index: 200; }
+
+  body.is-zoomed .sheet-frame {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    padding: 10px;
+    border: 0;
+    border-radius: 0;
+    background: var(--paper);
+    cursor: zoom-out;
+    animation: zoom-open 0.18s ease-out;
+  }
+  body.is-zoomed .sheet-frame .sheet {
+    --sheet-h: calc(100vh - 20px);
+    --sheet-h: calc(100dvh - 20px);
+  }
+  body.is-zoomed .zoom-hint { display: none; }
+  body.is-zoomed .zoom-close { display: grid; }
+
+  @keyframes zoom-open {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: none; }
+  }
 
   /* Seed + detail, relocated into the pinned block by studio.js. */
   .quick-controls {

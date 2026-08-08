@@ -24,8 +24,10 @@ drop-in fit for GitHub Pages.
   page loads. Saved designs live in `localStorage`. It works offline.
 - **Built for phones too.** On a narrow screen the studio pins the preview to the top of
   the viewport and scrolls the controls beneath it, so every setting you change stays
-  visible — no scrolling back and forth between the dials and the design. Landscape phones
-  get a side-by-side layout instead, where there is width but no height to spare.
+  visible — no scrolling back and forth between the dials and the design. The seed and
+  detail controls ride along inside that pinned block, and tapping the preview fills the
+  screen with it (tap anywhere to come back). Landscape phones get a side-by-side layout
+  instead, where there is width but no height to spare.
 - Light and dark themes, keyboard shortcuts, and layouts that hold together from 320px up.
 
 ## Running locally

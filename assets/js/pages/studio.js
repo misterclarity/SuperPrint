@@ -20,6 +20,8 @@ const els = {
   caption: document.getElementById('caption-toggle'),
   meta: document.getElementById('sheet-meta'),
   stage: document.querySelector('.studio-stage'),
+  sheetFrame: document.getElementById('sheet-frame'),
+  zoomClose: document.getElementById('zoom-close'),
   surprise: document.getElementById('act-surprise'),
   print: document.getElementById('act-print'),
   png: document.getElementById('act-png'),
@@ -88,13 +90,46 @@ function placeQuickControls() {
   }
 }
 
+/*
+ * Full-screen preview. The pinned preview has to stay small enough to leave
+ * room for the controls, so tapping it fills the screen; tapping anywhere puts
+ * it back and brings the controls with it.
+ */
+let zoomed = false;
+
+function setZoom(on) {
+  const next = on && compact.matches;
+  if (next === zoomed) return;
+  zoomed = next;
+
+  document.body.classList.toggle('is-zoomed', zoomed);
+  els.sheetFrame.setAttribute('aria-expanded', String(zoomed));
+  if (zoomed) els.zoomClose.focus();
+  else if (compact.matches) els.sheetFrame.focus();
+  syncPinnedHeight();
+}
+
+/** The preview only acts as a button in the layouts where it can expand. */
+function syncZoomAffordance() {
+  if (compact.matches) {
+    els.sheetFrame.setAttribute('role', 'button');
+    els.sheetFrame.setAttribute('tabindex', '0');
+    els.sheetFrame.setAttribute('aria-expanded', String(zoomed));
+    els.sheetFrame.setAttribute('aria-label', 'Preview — activate to view full screen');
+  } else {
+    setZoom(false);
+    for (const a of ['role', 'tabindex', 'aria-expanded', 'aria-label']) els.sheetFrame.removeAttribute(a);
+  }
+}
+
 /**
  * Publish how much of the viewport the pinned preview occupies, so the
  * stylesheet can keep controls from being scrolled underneath it. Zero when the
- * stage is not pinned (desktop, and short landscape viewports).
+ * stage is not pinned (desktop, and short landscape viewports), or while the
+ * preview is expanded and the controls are out of the way.
  */
 function syncPinnedHeight() {
-  const pinned = getComputedStyle(els.stage).position === 'sticky'
+  const pinned = !zoomed && getComputedStyle(els.stage).position === 'sticky'
     ? document.querySelector('.nav').offsetHeight + els.stage.offsetHeight
     : 0;
   document.documentElement.style.setProperty('--pinned-h', `${Math.round(pinned)}px`);
@@ -240,7 +275,23 @@ function wire() {
     toast('Link copied — it reopens this exact design');
   });
 
+  // Tapping the preview expands it; once expanded the frame covers the screen,
+  // so a tap anywhere — including the close button — lands here and closes it.
+  els.sheetFrame.addEventListener('click', () => setZoom(!zoomed));
+  els.sheetFrame.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setZoom(!zoomed);
+    }
+  });
+  els.zoomClose.innerHTML = ICONS.close;
+  document.querySelector('.zoom-hint').innerHTML = ICONS.expand;
+
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && zoomed) {
+      setZoom(false);
+      return;
+    }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const tag = document.activeElement && document.activeElement.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -257,10 +308,12 @@ if (els.sheet) {
   buildSegment(els.frame, Object.values(FRAMES), 'frame');
   wire();
   placeQuickControls();
+  syncZoomAffordance();
   render();
 
   const relayout = () => {
     placeQuickControls();
+    syncZoomAffordance();
     syncPinnedHeight();
   };
   compact.addEventListener('change', relayout);
