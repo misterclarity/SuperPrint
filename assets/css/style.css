@@ -614,6 +614,17 @@ input[type='range'] {
 
   .studio-shortcuts { display: none; }
 
+  /* Seed + detail, relocated into the pinned block by studio.js. */
+  .quick-controls {
+    display: grid;
+    gap: 8px;
+    padding-top: 2px;
+  }
+  .quick-controls .field { margin-bottom: 0; }
+  .quick-controls .field-label { margin-bottom: 6px; }
+  .quick-controls #seed-help { display: none; }
+  .quick-controls input[type='range'] { height: 32px; }
+
   /*
    * Anything scrolled into view — a tabbed-to control, a focused field — must
    * clear the pinned preview, or the browser parks it underneath where it
@@ -758,6 +769,16 @@ input[type='range'] {
     --sheet-h: 34dvh;
   }
 
+  /* Portrait and short means the on-screen keyboard is up: give the preview
+     less so it and the seed field share what is left. */
+  @media (max-height: 620px) {
+    .sheet-frame .sheet {
+      --sheet-h: 22vh;
+      --sheet-h: 22dvh;
+    }
+    .studio-stage { gap: 6px; padding-top: 4px; padding-bottom: 6px; }
+  }
+
   /* Keep the live region for screen readers, but stop it costing a line. */
   #sheet-meta {
     position: absolute;
@@ -850,7 +871,7 @@ input[type='range'] {
  * preview above the controls — but they have width to spare, so put the two
  * side by side instead. Both columns stay in view, the panel scrolls itself.
  */
-@media (max-width: 1000px) and (max-height: 560px) {
+@media (max-width: 1000px) and (min-width: 620px) and (max-height: 560px) {
   .studio {
     display: grid;
     grid-template-columns: minmax(0, 262px) minmax(0, 1fr);

@@ -50,6 +50,44 @@ function countLines(svg) {
   return (svg.match(/<(path|circle|ellipse|line|rect|polyline)\b/g) || []).length - 1; // minus the page rect
 }
 
+/*
+ * On a phone the seed and detail controls move out of the scrolling panel and
+ * into the pinned block, directly under the preview.
+ *
+ * They are the two dials you actually iterate on, and left in the panel they
+ * sit below a twelve-item style grid — so reaching them means scrolling, and
+ * focusing the seed field opens the keyboard, which on Android can leave the
+ * pinned preview outside the visible area entirely. Sitting inside the pinned
+ * block, they cannot be separated from the preview at all.
+ */
+const compact = window.matchMedia('(max-width: 1000px)');
+// Landscape phones already show panel and preview side by side, so there the
+// controls stay put — moving them would only make the pinned column too tall.
+const sideBySide = window.matchMedia('(max-width: 1000px) and (min-width: 620px) and (max-height: 560px)');
+const stacked = () => compact.matches && !sideBySide.matches;
+let quickRow = null;
+let quickHomes = null;
+
+function placeQuickControls() {
+  const fields = [document.getElementById('field-seed'), document.getElementById('field-detail')];
+  if (fields.some((f) => !f)) return;
+
+  if (!quickHomes) {
+    // Remember where each field belongs so the desktop layout can be restored.
+    quickHomes = fields.map((el) => ({ el, parent: el.parentNode, next: el.nextSibling }));
+    quickRow = document.createElement('div');
+    quickRow.className = 'quick-controls';
+  }
+
+  if (stacked()) {
+    if (quickRow.parentNode !== els.stage) els.stage.insertBefore(quickRow, els.meta);
+    fields.forEach((f) => quickRow.appendChild(f));
+  } else {
+    quickHomes.forEach((h) => h.parent.insertBefore(h.el, h.next));
+    if (quickRow.parentNode) quickRow.remove();
+  }
+}
+
 /**
  * Publish how much of the viewport the pinned preview occupies, so the
  * stylesheet can keep controls from being scrolled underneath it. Zero when the
@@ -218,7 +256,15 @@ if (els.sheet) {
   buildSegment(els.weight, Object.values(WEIGHTS), 'weight');
   buildSegment(els.frame, Object.values(FRAMES), 'frame');
   wire();
+  placeQuickControls();
   render();
+
+  const relayout = () => {
+    placeQuickControls();
+    syncPinnedHeight();
+  };
+  compact.addEventListener('change', relayout);
+  sideBySide.addEventListener('change', relayout);
   window.addEventListener('resize', syncPinnedHeight);
-  window.addEventListener('orientationchange', syncPinnedHeight);
+  window.addEventListener('orientationchange', relayout);
 }
