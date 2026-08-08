@@ -215,23 +215,140 @@ export function hexagon(sk, cx, cy, r, weight = 1) {
 }
 
 /**
+ * A closed, tapered needle from (ax,ay) to (bx,by).
+ *
+ * Snowflake arms are drawn as outlines rather than strokes on purpose: a bare
+ * line encloses no area, so there would be nothing to put colour into. Every
+ * part of every crystal is a shape with an inside.
+ */
+function needle(sk, ax, ay, bx, by, w, weight = 1) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len = Math.hypot(dx, dy) || 1;
+  /*
+   * The interior left to colour is 2w minus the stroke that the outline eats
+   * from each side. Below roughly this width the two sides merge into a single
+   * solid mark — the un-colourable result we are avoiding — so widen the
+   * needle rather than let that happen.
+   */
+  w = Math.max(w, sk.stroke * 1.45);
+  // Once that floor kicks in, a short branch would come out stubbier than it
+  // is long — a blob rather than a needle. Drop it instead; on a small flake
+  // the clean six arms read better than a crowd of nubs.
+  if (len < w * 3) return;
+
+  const ux = dx / len;
+  const uy = dy / len;
+  const nx = -uy;
+  const ny = ux;
+  const at = (t, off) => ({ x: ax + ux * len * t + nx * off, y: ay + uy * len * t + ny * off });
+  sk.poly([
+    at(0, w * 0.5),
+    at(0.42, w),
+    at(1, 0),
+    at(0.42, -w),
+    at(0, -w * 0.5),
+  ], true, sk.w(weight));
+}
+
+/**
+ * Recursive dendritic branching — the fractal that makes a real stellar
+ * crystal. Each branch sprouts a smaller copy of itself at the same 60° the
+ * lattice imposes, so the arm repeats its own structure at every scale.
+ */
+function dendriteBranch(sk, x, y, angle, len, w, depth, rng) {
+  if (len < sk.stroke * 4) return; // too short to read as a shape at all
+  const tipX = x + Math.cos(angle) * len;
+  const tipY = y + Math.sin(angle) * len;
+  needle(sk, x, y, tipX, tipY, w, depth > 0 ? 1 : 0.85);
+  // Stop before the children get too short to hold an open interior.
+  if (depth <= 0 || len < sk.stroke * 12) return;
+
+  const spots = depth > 1 ? [0.38, 0.68] : [0.55];
+  for (const t of spots) {
+    const px = x + Math.cos(angle) * len * t;
+    const py = y + Math.sin(angle) * len * t;
+    const sub = len * rng.range(0.36, 0.5);
+    for (const s of [-1, 1]) {
+      const child = angle + (s * Math.PI) / 3;
+      /*
+       * Angles here are relative to the arm's own axis. Arms sit 60° apart, so
+       * a child beyond that folds back across the neighbouring arm — which is
+       * what turned large dendrites into dark tangles. Keeping children inside
+       * the sector also reproduces the real thing: side branches off a side
+       * branch end up parallel to the spine.
+       */
+      if (Math.abs(child) > Math.PI / 3 + 1e-6) continue;
+      dendriteBranch(sk, px, py, child, sub, w * 0.66, depth - 1, rng);
+    }
+  }
+}
+
+/** One Koch subdivision: the middle third of a-b replaced by an outward spike. */
+function kochEdge(a, b, depth, out) {
+  if (depth === 0) {
+    out.push(a);
+    return;
+  }
+  const dx = (b.x - a.x) / 3;
+  const dy = (b.y - a.y) / 3;
+  const p1 = { x: a.x + dx, y: a.y + dy };
+  const p3 = { x: a.x + 2 * dx, y: a.y + 2 * dy };
+  const vx = p3.x - p1.x;
+  const vy = p3.y - p1.y;
+  // Rotating the middle third by -60° puts the spike outside the triangle.
+  const c = Math.cos(-Math.PI / 3);
+  const s = Math.sin(-Math.PI / 3);
+  const p2 = { x: p1.x + vx * c - vy * s, y: p1.y + vx * s + vy * c };
+  kochEdge(a, p1, depth - 1, out);
+  kochEdge(p1, p2, depth - 1, out);
+  kochEdge(p2, p3, depth - 1, out);
+  kochEdge(p3, b, depth - 1, out);
+}
+
+/** Closed Koch snowflake outline of radius r. */
+function kochRing(sk, cx, cy, r, depth, weight) {
+  const base = [0, 1, 2].map((i) => polar(cx, cy, r, -Math.PI / 2 + (i * TAU) / 3));
+  const pts = [];
+  for (let i = 0; i < 3; i++) kochEdge(base[i], base[(i + 1) % 3], depth, pts);
+  sk.poly(pts, true, sk.w(weight));
+}
+
+/**
+ * The Koch flake: nested fractal rings. One iteration is already a six-pointed
+ * star, and each further one adds spikes to every edge — self-similar all the
+ * way down, and every ring closed, so the bands between them take colour.
+ */
+function kochFlake(sk, cx, cy, r, rc, fine, rng) {
+  /*
+   * Each iteration divides the edge into thirds, so the smallest spike is
+   * r/3^depth across. Let that approach the line width and the whole outline
+   * fills in solid black — so the depth is derived from how much room the
+   * stroke actually leaves, per ring, rather than picked by eye.
+   */
+  const depthFor = (radius) => {
+    const d = Math.floor(Math.log(radius / (sk.stroke * 3.2)) / Math.log(3));
+    return Math.max(1, Math.min(3, d));
+  };
+
+  kochRing(sk, cx, cy, r, depthFor(r), 1.05);
+  const inner = r * rng.range(0.58, 0.68);
+  kochRing(sk, cx, cy, inner, depthFor(inner), 0.85);
+  if (fine > 20) {
+    const core = r * 0.34;
+    kochRing(sk, cx, cy, core, depthFor(core), 0.75);
+  }
+  hexagon(sk, cx, cy, rc * 0.9);
+}
+
+/**
  * One sixth of a snowflake, drawn along +x from the origin.
  *
  * `fine` is the arm length measured in line widths. Detail is gated on it:
  * branches and spurs that read beautifully on a large crystal merge into a
- * solid blot on a small one, so small flakes get simpler forms.
+ * solid blot on a small one, so small flakes get shallower recursion.
  */
 function snowArm(sk, r, rc, kind, rng, fine) {
-  if (kind === 'simple') {
-    sk.line(rc, 0, r, 0);
-    const x = lerp(rc, r, 0.55);
-    const len = (r - x) * 0.85;
-    for (const s of [-1, 1]) {
-      sk.line(x, 0, x + Math.cos(Math.PI / 3) * len, s * Math.sin(Math.PI / 3) * len, sk.w(0.85));
-    }
-    return;
-  }
-
   if (kind === 'stellar') {
     // Broad blade arms: closed shapes, so there is something to colour in.
     const w = r * rng.range(0.075, 0.115);
@@ -264,39 +381,35 @@ function snowArm(sk, r, rc, kind, rng, fine) {
   }
 
   if (kind === 'plate') {
-    // Sectored plate: a spoke with a diamond and a chevron near the tip.
-    sk.line(rc, 0, r, 0);
+    // Sectored plate: a spoke with a diamond and a fork near the tip.
+    needle(sk, rc, 0, r, 0, r * 0.045);
     const d = r * 0.1;
     const at = r * rng.range(0.5, 0.66);
     sk.poly([{ x: at - d, y: 0 }, { x: at, y: -d }, { x: at + d, y: 0 }, { x: at, y: d }], true, sk.w(0.85));
     const tip = r * 0.88;
     for (const s of [-1, 1]) {
-      sk.line(tip, 0, tip - r * 0.1, s * r * 0.1, sk.w(0.8));
+      needle(sk, tip, 0, tip - r * 0.1, s * r * 0.1, r * 0.03, 0.8);
     }
     return;
   }
 
-  // Dendrite: a shaft with paired branches at 60°, each with optional spurs.
-  sk.line(rc, 0, r, 0);
-  const branches = fine > 22 ? rng.int(2, 4) : 2;
+  // Dendrite: a central shaft carrying recursively branching side arms.
+  const depth = fine > 26 ? 2 : fine > 16 ? 1 : 0;
+  needle(sk, rc, 0, r, 0, r * 0.05);
+
+  const branches = fine > 22 ? rng.int(2, 3) : 2;
   for (let i = 0; i < branches; i++) {
-    const t = lerp(0.26, 0.84, (i + 0.5) / branches);
+    const t = lerp(0.3, 0.78, (i + 0.5) / branches);
     const x = lerp(rc, r, t);
-    const len = (r - x) * rng.range(0.6, 0.95);
-    const dx = Math.cos(Math.PI / 3) * len;
-    const dy = Math.sin(Math.PI / 3) * len;
+    const len = (r - x) * rng.range(0.62, 0.92);
     for (const s of [-1, 1]) {
-      const end = { x: x + dx, y: s * dy };
-      sk.line(x, 0, end.x, end.y, sk.w(0.85));
-      if (fine > 26 && len > r * 0.2 && rng.bool(0.55)) {
-        const q = { x: x + dx * 0.55, y: s * dy * 0.55 };
-        sk.line(q.x, q.y, q.x + len * 0.34, q.y, sk.w(0.7));
-      }
+      dendriteBranch(sk, x, 0, (s * Math.PI) / 3, len, r * 0.032, depth, rng);
     }
   }
+
   // Tip fork.
   for (const s of [-1, 1]) {
-    sk.line(r, 0, r - r * 0.13, s * r * 0.11, sk.w(0.8));
+    needle(sk, r * 0.97, 0, r * 0.84, s * r * 0.12, r * 0.026, 0.8);
   }
 }
 
@@ -308,11 +421,17 @@ export function snowflake(sk, cx, cy, r, rng) {
   // Arm length in line widths — the budget for how much detail can be legible.
   const fine = r / sk.stroke;
   let kind;
-  if (fine < 12) kind = 'simple';
-  else if (fine < 20) kind = rng.pick(['simple', 'plate', 'dendrite']);
-  else kind = rng.pick(['dendrite', 'dendrite', 'stellar', 'plate']);
+  if (fine < 12) kind = rng.pick(['koch', 'plate']);
+  else if (fine < 20) kind = rng.pick(['koch', 'plate', 'dendrite']);
+  else kind = rng.pick(['dendrite', 'dendrite', 'koch', 'stellar', 'plate']);
 
   const rc = r * rng.range(0.13, 0.2);
+
+  // The Koch form is a whole-flake fractal rather than six repeated arms.
+  if (kind === 'koch') {
+    kochFlake(sk, cx, cy, r, rc, fine, rng);
+    return;
+  }
 
   const arm = new Sketch({ width: sk.width, height: sk.height, stroke: sk.stroke });
   snowArm(arm, r, rc, kind, rng, fine);
@@ -329,15 +448,18 @@ export function snowflake(sk, cx, cy, r, rng) {
   if (fine > 18 && rng.bool(0.6)) hexagon(sk, cx, cy, rc * 0.5, 0.75);
 }
 
-/** Tiny six-armed sparkle for filling gaps between snowflakes. */
+/**
+ * Tiny sparkle for filling gaps between snowflakes. Drawn as a closed star
+ * rather than crossed strokes so even the smallest fleck can be coloured.
+ */
 export function sparkle(sk, cx, cy, r, rng) {
-  const arms = rng.bool(0.5) ? 6 : 4;
-  for (let i = 0; i < arms; i++) {
-    const a = (i / arms) * TAU;
-    const p = polar(cx, cy, r, a);
-    sk.line(cx, cy, p.x, p.y, sk.w(0.75));
+  const arms = rng.bool(0.6) ? 6 : 4;
+  const pts = [];
+  for (let i = 0; i < arms * 2; i++) {
+    pts.push(polar(cx, cy, i % 2 ? r * 0.34 : r, (i / (arms * 2)) * TAU));
   }
-  if (r > 6 && rng.bool(0.5)) hexagon(sk, cx, cy, r * 0.34, 0.65);
+  sk.poly(pts, true, sk.w(0.85));
+  if (r > 9 && rng.bool(0.4)) hexagon(sk, cx, cy, r * 0.22, 0.65);
 }
 
 /** Evenly spaced dots along a straight run. */

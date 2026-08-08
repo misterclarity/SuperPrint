@@ -3,10 +3,12 @@
 
 import generators from './generators.test.mjs';
 import bounds from './bounds.test.mjs';
+import closedShapes from './closed-shapes.test.mjs';
 
 const suites = [
   ['generators', generators],
   ['page bounds', bounds],
+  ['closed shapes', closedShapes],
 ];
 
 let total = 0;
