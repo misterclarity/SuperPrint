@@ -21,10 +21,18 @@ function attrs(a) {
 }
 
 export class Sketch {
-  constructor({ width, height, stroke = 2.4 }) {
+  /**
+   * `stroke` is the pen actually being drawn with. `refStroke` is the widest
+   * pen the sheet might be drawn with, and is what generators must consult
+   * when deciding whether a detail is worth drawing — see
+   * tests/line-weight.test.mjs. Judging legibility against `stroke` would make
+   * the choice of pen change the artwork itself.
+   */
+  constructor({ width, height, stroke = 2.4, refStroke }) {
     this.width = width;
     this.height = height;
     this.stroke = stroke;
+    this.refStroke = refStroke || stroke;
     this.parts = [];
   }
 

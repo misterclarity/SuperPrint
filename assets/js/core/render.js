@@ -35,6 +35,14 @@ export const FRAMES = {
 
 export const COMPLEXITY_LABELS = ['', 'Calm', 'Easy', 'Balanced', 'Detailed', 'Intricate'];
 
+/*
+ * One geometry has to serve all three line weights — changing the pen must not
+ * redraw the picture. So generators judge "is this detail legible?" against the
+ * boldest pen on offer; thinner pens then render that same geometry with more
+ * room to spare.
+ */
+const REFERENCE_STROKE = Math.max(...Object.values(WEIGHTS).map((w) => w.value));
+
 export const DEFAULTS = {
   style: 'mandala',
   seed: 'amber-meadow-108',
@@ -97,7 +105,12 @@ export function buildSVG(input, { background = '#ffffff' } = {}) {
   const params = normalize(input);
   const page = PAPERS[params.paper];
   const style = getStyle(params.style);
-  const sk = new Sketch({ width: page.w, height: page.h, stroke: WEIGHTS[params.weight].value });
+  const sk = new Sketch({
+    width: page.w,
+    height: page.h,
+    stroke: WEIGHTS[params.weight].value,
+    refStroke: REFERENCE_STROKE,
+  });
 
   drawFrame(sk, params, page);
 

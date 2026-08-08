@@ -231,7 +231,7 @@ function needle(sk, ax, ay, bx, by, w, weight = 1) {
    * solid mark — the un-colourable result we are avoiding — so widen the
    * needle rather than let that happen.
    */
-  w = Math.max(w, sk.stroke * 1.45);
+  w = Math.max(w, sk.refStroke * 1.2);
   // Once that floor kicks in, a short branch would come out stubbier than it
   // is long — a blob rather than a needle. Drop it instead; on a small flake
   // the clean six arms read better than a crowd of nubs.
@@ -257,12 +257,12 @@ function needle(sk, ax, ay, bx, by, w, weight = 1) {
  * lattice imposes, so the arm repeats its own structure at every scale.
  */
 function dendriteBranch(sk, x, y, angle, len, w, depth, rng) {
-  if (len < sk.stroke * 4) return; // too short to read as a shape at all
+  if (len < sk.refStroke * 2.5) return; // too short to read as a shape at all
   const tipX = x + Math.cos(angle) * len;
   const tipY = y + Math.sin(angle) * len;
   needle(sk, x, y, tipX, tipY, w, depth > 0 ? 1 : 0.85);
   // Stop before the children get too short to hold an open interior.
-  if (depth <= 0 || len < sk.stroke * 12) return;
+  if (depth <= 0 || len < sk.refStroke * 7) return;
 
   const spots = depth > 1 ? [0.38, 0.68] : [0.55];
   for (const t of spots) {
@@ -327,14 +327,14 @@ function kochFlake(sk, cx, cy, r, rc, fine, rng) {
    * stroke actually leaves, per ring, rather than picked by eye.
    */
   const depthFor = (radius) => {
-    const d = Math.floor(Math.log(radius / (sk.stroke * 3.2)) / Math.log(3));
+    const d = Math.floor(Math.log(radius / (sk.refStroke * 2.2)) / Math.log(3));
     return Math.max(1, Math.min(3, d));
   };
 
   kochRing(sk, cx, cy, r, depthFor(r), 1.05);
   const inner = r * rng.range(0.58, 0.68);
   kochRing(sk, cx, cy, inner, depthFor(inner), 0.85);
-  if (fine > 20) {
+  if (fine > 13) {
     const core = r * 0.34;
     kochRing(sk, cx, cy, core, depthFor(core), 0.75);
   }
@@ -360,11 +360,11 @@ function snowArm(sk, r, rc, kind, rng, fine) {
       { x: rc, y: -w * 0.62 },
     ];
     sk.poly(blade, true);
-    if (fine > 18) sk.poly(blade.map((p) => ({ x: lerp(r * 0.55, p.x, 0.6), y: p.y * 0.45 })), true, sk.w(0.7));
+    if (fine > 11.5) sk.poly(blade.map((p) => ({ x: lerp(r * 0.55, p.x, 0.6), y: p.y * 0.45 })), true, sk.w(0.7));
 
     // Side spurs: small diamonds at the crystal's natural 60°, starting close
     // to the hub like the sidebranches they stand in for.
-    const spurs = fine > 20 ? rng.int(2, 3) : 2;
+    const spurs = fine > 13 ? rng.int(2, 3) : 2;
     for (let i = 0; i < spurs; i++) {
       const t = spurs > 1 ? lerp(0.12, 0.66, i / (spurs - 1)) : 0.4;
       const base = { x: lerp(rc, r, t), y: 0 };
@@ -400,11 +400,11 @@ function snowArm(sk, r, rc, kind, rng, fine) {
    * grows — so branching begins at the hub. Starting sidebranches partway out
    * leaves a bare stem no real crystal has.
    */
-  const depth = fine > 26 ? 2 : fine > 16 ? 1 : 0;
+  const depth = fine > 16.5 ? 2 : fine > 10 ? 1 : 0;
   const armLen = r - rc;
   needle(sk, rc, 0, r, 0, r * 0.05);
 
-  const pairs = fine > 30 ? rng.int(4, 5) : fine > 20 ? rng.int(3, 4) : 2;
+  const pairs = fine > 19 ? rng.int(4, 5) : fine > 13 ? rng.int(3, 4) : 2;
   const envelope = r * 0.97;
   for (let i = 0; i < pairs; i++) {
     const t = pairs > 1 ? lerp(0.05, 0.88, i / (pairs - 1)) : 0.4;
@@ -441,10 +441,10 @@ function snowArm(sk, r, rc, kind, rng, fine) {
  */
 export function snowflake(sk, cx, cy, r, rng) {
   // Arm length in line widths — the budget for how much detail can be legible.
-  const fine = r / sk.stroke;
+  const fine = r / sk.refStroke;
   let kind;
-  if (fine < 12) kind = rng.pick(['koch', 'plate', 'dendrite']);
-  else if (fine < 20) kind = rng.pick(['koch', 'plate', 'dendrite', 'stellar']);
+  if (fine < 7.5) kind = rng.pick(['koch', 'plate', 'dendrite']);
+  else if (fine < 13) kind = rng.pick(['koch', 'plate', 'dendrite', 'stellar']);
   else kind = rng.pick(['dendrite', 'dendrite', 'koch', 'stellar', 'plate']);
 
   const rc = r * rng.range(0.13, 0.2);
@@ -455,7 +455,9 @@ export function snowflake(sk, cx, cy, r, rng) {
     return;
   }
 
-  const arm = new Sketch({ width: sk.width, height: sk.height, stroke: sk.stroke });
+  const arm = new Sketch({
+    width: sk.width, height: sk.height, stroke: sk.stroke, refStroke: sk.refStroke,
+  });
   snowArm(arm, r, rc, kind, rng, fine);
   const content = arm.parts.join('');
   for (let i = 0; i < 6; i++) {
@@ -464,10 +466,10 @@ export function snowflake(sk, cx, cy, r, rng) {
 
   if (kind === 'plate') {
     hexagon(sk, cx, cy, r * 0.92, 1);
-    if (fine > 14) hexagon(sk, cx, cy, r * 0.62, 0.8);
+    if (fine > 9) hexagon(sk, cx, cy, r * 0.62, 0.8);
   }
   hexagon(sk, cx, cy, rc);
-  if (fine > 18 && rng.bool(0.6)) hexagon(sk, cx, cy, rc * 0.5, 0.75);
+  if (fine > 11.5 && rng.bool(0.6)) hexagon(sk, cx, cy, rc * 0.5, 0.75);
 }
 
 /**

@@ -93,7 +93,9 @@ export default {
     const rim = R * rng.range(0.76, 0.84);
 
     // Build the wedge once, then re-emit it as mirrored pairs.
-    const cache = new (sk.constructor)({ width: sk.width, height: sk.height, stroke: sk.stroke });
+    const cache = new (sk.constructor)({
+      width: sk.width, height: sk.height, stroke: sk.stroke, refStroke: sk.refStroke,
+    });
     wedgeContent(cache, rim, half, rng, complexity);
     const content = cache.parts.join('');
 
