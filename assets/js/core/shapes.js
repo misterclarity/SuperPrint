@@ -362,10 +362,11 @@ function snowArm(sk, r, rc, kind, rng, fine) {
     sk.poly(blade, true);
     if (fine > 18) sk.poly(blade.map((p) => ({ x: lerp(r * 0.55, p.x, 0.6), y: p.y * 0.45 })), true, sk.w(0.7));
 
-    // Side spurs: small diamonds at the crystal's natural 60°.
-    const spurs = fine > 20 ? rng.int(1, 2) : 1;
+    // Side spurs: small diamonds at the crystal's natural 60°, starting close
+    // to the hub like the sidebranches they stand in for.
+    const spurs = fine > 20 ? rng.int(2, 3) : 2;
     for (let i = 0; i < spurs; i++) {
-      const t = rng.range(0.4, 0.72);
+      const t = spurs > 1 ? lerp(0.12, 0.66, i / (spurs - 1)) : 0.4;
       const base = { x: lerp(rc, r, t), y: 0 };
       const len = r * rng.range(0.16, 0.26);
       for (const s of [-1, 1]) {
@@ -393,17 +394,38 @@ function snowArm(sk, r, rc, kind, rng, fine) {
     return;
   }
 
-  // Dendrite: a central shaft carrying recursively branching side arms.
+  /*
+   * Dendrite. A crystal starts as a small hexagonal plate and the six branches
+   * sprout from its corners, with sidebranches appearing along each arm as it
+   * grows — so branching begins at the hub. Starting sidebranches partway out
+   * leaves a bare stem no real crystal has.
+   */
   const depth = fine > 26 ? 2 : fine > 16 ? 1 : 0;
+  const armLen = r - rc;
   needle(sk, rc, 0, r, 0, r * 0.05);
 
-  const branches = fine > 22 ? rng.int(2, 3) : 2;
-  for (let i = 0; i < branches; i++) {
-    const t = lerp(0.3, 0.78, (i + 0.5) / branches);
-    const x = lerp(rc, r, t);
-    const len = (r - x) * rng.range(0.62, 0.92);
+  const pairs = fine > 30 ? rng.int(4, 5) : fine > 20 ? rng.int(3, 4) : 2;
+  const envelope = r * 0.97;
+  for (let i = 0; i < pairs; i++) {
+    const t = pairs > 1 ? lerp(0.05, 0.88, i / (pairs - 1)) : 0.4;
+    const d = rc + armLen * t;
+    /*
+     * A sidebranch leaves at 60°, so from distance d its tip lands at
+     * sqrt(d² + L² + dL). Solving that against the crystal's envelope caps L —
+     * and because the cap falls to zero as d approaches the rim, the arm
+     * tapers to a point on its own, no hand-tuned length profile needed.
+     */
+    const room = (-d + Math.sqrt(Math.max(0, 4 * envelope * envelope - 3 * d * d))) / 2;
+    /*
+     * Sidebranches near the hub stay short: they sit in the gap between two
+     * main arms, both drawing on the same vapour, so they never get to fill
+     * it. Length therefore grows with distance from the centre until the
+     * envelope cap takes over and pulls it back to nothing — which is what
+     * makes a stellar dendrite read as a six-pointed star rather than a disc.
+     */
+    const len = Math.min(room, armLen * (0.1 + 0.5 * t)) * rng.range(0.8, 1);
     for (const s of [-1, 1]) {
-      dendriteBranch(sk, x, 0, (s * Math.PI) / 3, len, r * 0.032, depth, rng);
+      dendriteBranch(sk, d, 0, (s * Math.PI) / 3, len, r * 0.032, depth, rng);
     }
   }
 
@@ -421,8 +443,8 @@ export function snowflake(sk, cx, cy, r, rng) {
   // Arm length in line widths — the budget for how much detail can be legible.
   const fine = r / sk.stroke;
   let kind;
-  if (fine < 12) kind = rng.pick(['koch', 'plate']);
-  else if (fine < 20) kind = rng.pick(['koch', 'plate', 'dendrite']);
+  if (fine < 12) kind = rng.pick(['koch', 'plate', 'dendrite']);
+  else if (fine < 20) kind = rng.pick(['koch', 'plate', 'dendrite', 'stellar']);
   else kind = rng.pick(['dendrite', 'dendrite', 'koch', 'stellar', 'plate']);
 
   const rc = r * rng.range(0.13, 0.2);

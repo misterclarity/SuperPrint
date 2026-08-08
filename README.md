@@ -110,8 +110,17 @@ Notes on a few of the algorithms:
   patterns: motifs composed on a lattice, mirrored, and stacked into bands between guard
   stripes.
 - **Frost Field** and **Bloom Field** both scatter by rejection sampling, largest shapes
-  first. Frost Field scales each crystal's detail to its radius in line widths, because
-  branching that reads beautifully at full size turns into a blot when small.
+  first. Frost Field follows how snow crystals actually grow: a crystal starts as a small
+  hexagonal plate and its six branches sprout from that plate's corners, so arms begin at
+  the hub rather than after a bare stem. Sidebranches leave at multiples of 60° and run
+  parallel to their neighbours, and they stay short near the centre — squeezed into the
+  gap between two arms competing for the same vapour — which is what makes a stellar
+  dendrite read as a six-pointed star instead of a disc. Dendrites branch recursively and
+  a second form draws nested Koch snowflake rings, both self-similar the way real crystals
+  are. Fractal depth is derived from what the line width can resolve rather than picked by
+  eye: a Koch edge is `r/3^depth` across, and left unchecked the smaller flakes fill in
+  solid black. Every element is a closed outline — a bare stroke encloses no area, so
+  there would be nothing to colour, which `tests/closed-shapes.test.mjs` asserts.
 - **Glyph Stela** reproduces the *structure* of Classic Maya inscriptions and fills it
   with invented signs. **These are not real Maya glyphs and they spell nothing** — Maya
   script is a living heritage with a largely deciphered vocabulary, so inventing readable
