@@ -145,6 +145,31 @@
   </div>
 </footer>
 
+<!--
+  Shown once, the first time someone turns the printed seed off. The setting is
+  already applied by then — this asks, it does not gate anything.
+-->
+<dialog class="support-dialog" id="kofi-dialog" aria-labelledby="kofi-title">
+  <form method="dialog">
+    <h2 id="kofi-title">Turning the seed off?</h2>
+    <p>
+      Done — it's off, and it stays off. Pages you make are yours to print, share or sell,
+      no credit needed. The little seed line is only there so a design can find its way
+      back to you later.
+    </p>
+    <p>
+      SuperPrint is free, with no ads, no accounts and nothing to sign up for. If it has
+      been useful to you, a coffee helps keep it that way.
+    </p>
+    <div class="support-actions">
+      <a class="btn btn-primary" href="https://ko-fi.com/misterclarity" target="_blank" rel="noopener noreferrer">
+        Support on Ko-fi
+      </a>
+      <button class="btn btn-ghost" value="dismiss" autofocus>Maybe later</button>
+    </div>
+  </form>
+</dialog>
+
 <script type="module" src="assets/js/ui.js"></script>
 <script type="module" src="assets/js/pages/studio.js"></script>
 </body>

@@ -37,7 +37,8 @@
   .studio-panel,
   .stage-bar,
   .toast,
-  .skip-link { display: none !important; }
+  .skip-link,
+  dialog { display: none !important; }
 
   .sheet,
   .sheet-frame {

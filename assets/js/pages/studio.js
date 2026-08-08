@@ -201,6 +201,31 @@ function paintSave() {
   els.save.setAttribute('aria-pressed', String(saved));
 }
 
+/*
+ * The printed seed is the only credit the site carries, so turning it off is
+ * the one natural moment to ask for support. It is asked once and never again:
+ * the setting has already applied by the time this runs, nothing is gated on
+ * the answer, and nagging someone who has already said no would be worse than
+ * not asking at all.
+ */
+const KOFI_ASKED = 'superprint.kofi.asked';
+let kofiAsked = false;
+
+function askForSupport() {
+  if (kofiAsked) return;
+  kofiAsked = true; // also covers private mode, where storage below throws
+
+  try {
+    if (localStorage.getItem(KOFI_ASKED)) return;
+    localStorage.setItem(KOFI_ASKED, '1');
+  } catch {
+    /* no storage: asking once per session is the most we can promise */
+  }
+
+  const dialog = document.getElementById('kofi-dialog');
+  if (dialog && typeof dialog.showModal === 'function') dialog.showModal();
+}
+
 function newSeed() {
   const seed = randomSeed();
   els.seedInput.value = seed;
@@ -228,7 +253,10 @@ function wire() {
   });
 
   els.caption.checked = params.caption;
-  els.caption.addEventListener('change', () => set({ caption: els.caption.checked }));
+  els.caption.addEventListener('change', () => {
+    set({ caption: els.caption.checked });
+    if (!els.caption.checked) askForSupport();
+  });
 
   els.surprise.innerHTML = `${ICONS.wand}<span>Surprise me</span>`;
   els.surprise.addEventListener('click', () => {
