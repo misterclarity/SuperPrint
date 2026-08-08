@@ -1,5 +1,11 @@
 name: Deploy to GitHub Pages
 
+# NOTE: this workflow only does anything when Settings -> Pages -> Source is set
+# to "GitHub Actions". If Pages is set to "Deploy from a branch" (as it is at
+# the time of writing), GitHub runs its own built-in "pages build and
+# deployment" job on every push to the selected branch and this file stays
+# dormant. Tests run separately, on every branch, via ci.yml.
+
 on:
   push:
     branches: [main]

@@ -57,14 +57,24 @@ Two suites, both plain Node with no test framework:
 
 ## Deploying to GitHub Pages
 
-`.github/workflows/pages.yml` runs the tests and then publishes the repository root on
-every push to `main`. To turn it on: **Settings → Pages → Build and deployment →
-Source: GitHub Actions**.
+There are two ways to publish this, and which one is live depends on a repository
+setting under **Settings → Pages → Build and deployment → Source**:
 
-Because the site is static, you can equally serve it from a `gh-pages` branch or the
-`main` branch root — `.nojekyll` is present so Jekyll leaves the files alone. All paths
-are relative, so it works from a project subpath (`user.github.io/SuperPrint/`) as well as
-from a custom domain.
+- **Deploy from a branch** (what this repo currently uses). GitHub runs its own built-in
+  "pages build and deployment" job on every push to the selected branch and copies the
+  repository as-is. Nothing in `.github/workflows` is involved.
+- **GitHub Actions.** `.github/workflows/pages.yml` runs the tests and then publishes the
+  repository root on pushes to `main`. It stays dormant under the other setting.
+
+Either way `.github/workflows/ci.yml` runs the test suites on every branch.
+
+Because the site is static, any of these works — `.nojekyll` is present so Jekyll leaves
+the files alone, and all paths are relative, so it serves correctly from a project
+subpath (`user.github.io/SuperPrint/`) as well as from a custom domain.
+
+**Seeing a stale version after a deploy?** Pages serves files with `Cache-Control:
+max-age=600`, so a browser can hold the old CSS and JavaScript for up to ten minutes.
+Loading the site in a private window bypasses that entirely.
 
 ## How it works
 

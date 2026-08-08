@@ -1,0 +1,21 @@
+name: Tests
+
+# Runs on every branch. The Pages deployment is handled separately (see
+# pages.yml, and the note in README about the Pages source setting), so this
+# is what actually validates a push.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Generator and page-bounds suites
+        run: npm test
