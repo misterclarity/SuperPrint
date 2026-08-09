@@ -52,6 +52,16 @@ export function makeRng(seed) {
       return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(Math.PI * 2 * v);
     },
     sign: () => (next() < 0.5 ? -1 : 1),
+    /**
+     * A child generator, drawn from this one.
+     *
+     * Needed wherever a motif is decided at one moment and drawn at another —
+     * layering, for instance, works out what covers what before anything is
+     * painted. Giving each motif its own generator means the picture no longer
+     * depends on the order the motifs happen to be drawn in, only on the order
+     * they were created, so the seed keeps its promise.
+     */
+    fork: () => makeRng(`${next()}`),
   };
 }
 

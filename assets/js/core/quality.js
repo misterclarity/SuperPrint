@@ -30,188 +30,41 @@
 
 import { buildSVG, PAPERS, normalize } from './render.js';
 import { randomSeed } from './rng.js';
-
-/* ------------------------------------------------------- affine helpers -- */
-
-const IDENTITY = [1, 0, 0, 1, 0, 0];
-
-/** SVG matrix composition: apply `m` first, then `n`. */
-function compose(n, m) {
-  return [
-    n[0] * m[0] + n[2] * m[1],
-    n[1] * m[0] + n[3] * m[1],
-    n[0] * m[2] + n[2] * m[3],
-    n[1] * m[2] + n[3] * m[3],
-    n[0] * m[4] + n[2] * m[5] + n[4],
-    n[1] * m[4] + n[3] * m[5] + n[5],
-  ];
-}
-
-function apply(m, x, y) {
-  return { x: m[0] * x + m[2] * y + m[4], y: m[1] * x + m[3] * y + m[5] };
-}
-
-const RAD = Math.PI / 180;
-
-/**
- * Parse the transform forms this codebase emits: translate, rotate (with and
- * without a centre) and scale, in sequence.
- */
-function parseTransform(text) {
-  let m = IDENTITY;
-  const re = /(translate|rotate|scale)\(([^)]*)\)/g;
-  let hit;
-  while ((hit = re.exec(text))) {
-    const a = hit[2].trim().split(/[\s,]+/).map(Number);
-    if (hit[1] === 'translate') {
-      m = compose(m, [1, 0, 0, 1, a[0] || 0, a[1] || 0]);
-    } else if (hit[1] === 'scale') {
-      m = compose(m, [a[0] ?? 1, 0, 0, a.length > 1 ? a[1] : a[0] ?? 1, 0, 0]);
-    } else {
-      const c = Math.cos((a[0] || 0) * RAD);
-      const s = Math.sin((a[0] || 0) * RAD);
-      let r = [c, s, -s, c, 0, 0];
-      if (a.length >= 3) {
-        // rotate(deg cx cy) == translate(c) · rotate(deg) · translate(-c)
-        r = compose([1, 0, 0, 1, a[1], a[2]], compose(r, [1, 0, 0, 1, -a[1], -a[2]]));
-      }
-      m = compose(m, r);
-    }
-  }
-  return m;
-}
-
-/* --------------------------------------------------------- path sampling -- */
-
-const ARGS = { M: 2, L: 2, C: 6, Q: 4, A: 7, Z: 0 };
-
-/**
- * Points along a path, including curve midpoints so bows are not missed.
- *
- * Points that begin a new run are flagged `move`, so a consumer measuring
- * segment lengths does not invent a stroke across a pen-up jump.
- */
-function pathPoints(d, out, m) {
-  const tokens = d.match(/[MLCQAZ]|-?\d*\.?\d+(?:e[-+]?\d+)?/gi) || [];
-  let i = 0;
-  let cx = 0;
-  let cy = 0;
-  let sx = 0;
-  let sy = 0;
-  const push = (x, y, move) => {
-    const p = apply(m, x, y);
-    if (move) p.move = true;
-    out.push(p);
-  };
-
-  while (i < tokens.length) {
-    const cmd = tokens[i++].toUpperCase();
-    const n = ARGS[cmd];
-    if (n === undefined) continue;
-    const a = [];
-    for (let k = 0; k < n; k++) a.push(Number(tokens[i++]));
-
-    if (cmd === 'M') {
-      [cx, cy] = a;
-      sx = cx;
-      sy = cy;
-      push(cx, cy, true);
-    } else if (cmd === 'L') {
-      [cx, cy] = a;
-      push(cx, cy);
-    } else if (cmd === 'C') {
-      // Midpoint of the cubic, so a long bow contributes where it actually is.
-      const mx = (cx + 3 * a[0] + 3 * a[2] + a[4]) / 8;
-      const my = (cy + 3 * a[1] + 3 * a[3] + a[5]) / 8;
-      push(mx, my);
-      cx = a[4];
-      cy = a[5];
-      push(cx, cy);
-    } else if (cmd === 'Q') {
-      push((cx + 2 * a[0] + a[2]) / 4, (cy + 2 * a[1] + a[3]) / 4);
-      cx = a[2];
-      cy = a[3];
-      push(cx, cy);
-    } else if (cmd === 'A') {
-      // Sampled by its chord: enough to place the arc, and the arcs this
-      // codebase draws are shallow enough that the error is small.
-      cx = a[5];
-      cy = a[6];
-      push(cx, cy);
-    } else if (cmd === 'Z') {
-      // The closing stroke is real ink, so it is emitted like any other line.
-      cx = sx;
-      cy = sy;
-      push(cx, cy);
-    }
-  }
-}
-
-const ATTR = (src, name) => {
-  const hit = src.match(new RegExp(`${name}="([^"]*)"`));
-  return hit ? hit[1] : null;
-};
-const NUM = (src, name) => Number(ATTR(src, name) || 0);
+import { parseFragment } from './path.js';
 
 /**
  * Every drawn point on the sheet, in page coordinates.
  *
- * Group transforms are honoured: several styles draw their content once in
- * local coordinates and re-emit it rotated, and ignoring that would pile every
- * sample at the origin and make the measurement meaningless.
+ * The reading and flattening is path.js's job; all this adds is the run
+ * boundaries. Points that begin a new run are flagged `move` so the caller can
+ * measure segment lengths without inventing a stroke across a pen-up jump, and
+ * a closed subpath gets its first point again at the end, because the closing
+ * segment is ink like any other.
  */
+/*
+ * Curves are flattened far more coarsely here than for drawing.
+ *
+ * This measures where the ink sits on a whole sheet — which half is heavier,
+ * how far the drawing reaches — and at that scale a chord error of a fiftieth
+ * of an inch is invisible in the result while being many times cheaper to
+ * compute. Print tolerance would generate tens of thousands of points per page
+ * to answer a question decided by the first two significant figures, and the
+ * scoring runs several times per click.
+ */
+const MEASURE_TOLERANCE = 2;
+
 export function samplePoints(svg) {
   // Everything before the first styled group is the white page background,
   // which says nothing about layout.
   const body = svg.slice(svg.indexOf('stroke-linejoin'));
   const out = [];
-  const stack = [IDENTITY];
-  const re = /<(\/?)(g|path|circle|ellipse|line|rect)\b([^>]*)>/g;
-  let hit;
 
-  while ((hit = re.exec(body))) {
-    const [, closing, tag, attrs] = hit;
-    if (tag === 'g') {
-      if (closing) stack.pop();
-      else stack.push(compose(stack[stack.length - 1], parseTransform(ATTR(attrs, 'transform') || '')));
-      continue;
-    }
-
-    let m = stack[stack.length - 1];
-    const own = ATTR(attrs, 'transform');
-    if (own) m = compose(m, parseTransform(own));
-
-    if (tag === 'path') {
-      pathPoints(ATTR(attrs, 'd') || '', out, m);
-    } else if (tag === 'circle' || tag === 'ellipse') {
-      const x = NUM(attrs, 'cx');
-      const y = NUM(attrs, 'cy');
-      const rx = tag === 'circle' ? NUM(attrs, 'r') : NUM(attrs, 'rx');
-      const ry = tag === 'circle' ? NUM(attrs, 'r') : NUM(attrs, 'ry');
-      // Enough samples that the chords approximate the circumference closely.
-      const STEPS = 24;
-      for (let k = 0; k <= STEPS; k++) {
-        const a = (k / STEPS) * Math.PI * 2;
-        const p = apply(m, x + rx * Math.cos(a), y + ry * Math.sin(a));
-        if (k === 0) p.move = true;
-        out.push(p);
-      }
-    } else if (tag === 'line') {
-      const a = apply(m, NUM(attrs, 'x1'), NUM(attrs, 'y1'));
-      a.move = true;
-      out.push(a, apply(m, NUM(attrs, 'x2'), NUM(attrs, 'y2')));
-    } else if (tag === 'rect') {
-      const x = NUM(attrs, 'x');
-      const y = NUM(attrs, 'y');
-      const w = NUM(attrs, 'width');
-      const h = NUM(attrs, 'height');
-      const corners = [[x, y], [x + w, y], [x + w, y + h], [x, y + h], [x, y]];
-      corners.forEach(([px, py], k) => {
-        const p = apply(m, px, py);
-        if (k === 0) p.move = true;
-        out.push(p);
-      });
-    }
+  for (const sub of parseFragment(body, MEASURE_TOLERANCE)) {
+    const pts = sub.points;
+    if (pts.length < 2) continue;
+    out.push({ x: pts[0].x, y: pts[0].y, move: true });
+    for (let i = 1; i < pts.length; i++) out.push(pts[i]);
+    if (sub.closed) out.push(pts[0]);
   }
   return out;
 }
@@ -339,9 +192,14 @@ const now = () =>
  * @param {object} [opts]
  * @param {number} [opts.budgetMs]  wall-clock ceiling for the search
  * @param {number} [opts.max]       never test more than this many
+ * @param {number} [opts.min]       test this many even if the budget is spent.
+ *   Two is right where the page is the point, so the filter is never a no-op.
+ *   One suits a wall of thumbnails: the costliest styles take longer to draw
+ *   than the whole budget, and insisting on a second candidate there doubles
+ *   the wait for the one tile least likely to be looked at closely.
  * @param {string[]} [opts.seeds]   fixed pool, for tests; ignores the budget
  */
-export function pickBest(params, { budgetMs = 120, max = 8, seeds } = {}) {
+export function pickBest(params, { budgetMs = 120, max = 8, min = 2, seeds } = {}) {
   const started = now();
   let best = null;
   let tested = 0;
@@ -351,9 +209,7 @@ export function pickBest(params, { budgetMs = 120, max = 8, seeds } = {}) {
     const result = { seed, ...measureDesign({ ...params, seed }) };
     tested++;
     if (!best || result.score > best.score) best = result;
-    // Always judge at least two, so the filter is never a no-op, but stop as
-    // soon as the budget is gone.
-    if (!seeds && tested >= 2 && now() - started >= budgetMs) break;
+    if (!seeds && tested >= min && now() - started >= budgetMs) break;
   }
   return best;
 }

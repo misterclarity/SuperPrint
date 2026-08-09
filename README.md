@@ -81,6 +81,7 @@ Loading the site in a private window bypasses that entirely.
 ```
 index.html  studio.html  gallery.html  saved.html      pages
 assets/js/core/   rng · sketch · shapes · render · export · store
+                  path · clip · layer · quality   (geometry and composition)
 assets/js/gen/    one module per drawing style
 assets/js/pages/  per-page controllers
 ```
@@ -93,6 +94,26 @@ see really is what prints.
 Adding a style means writing one module with `{ id, name, blurb, tags, draw(sk, ctx) }`
 and listing it in `assets/js/gen/index.js`; everything else (studio controls, gallery
 filters, exports, saving) picks it up automatically.
+
+Two passes sit between the generators and the page:
+
+- **Layering.** Drawing is additive, so a leaf laid across a berry leaves both outlines
+  complete and crossing — a tangle of slivers too small to put a pencil in, rather than a
+  leaf on a berry. `layered()` draws back to front and lets each motif knock out what it
+  covers, which is a boolean difference over the flattened outlines (`path.js` →
+  `clip.js`). Only closed shapes occlude: a leaf's silhouette hides what is under it, its
+  veins do not. Shapes nothing overlaps are emitted exactly as drawn, curves and all, so a
+  page pays for clipping only where it shows. The same machinery unions a motif's own
+  outlines into one silhouette where the pieces are meant to read as a single shape —
+  that is what turns a serrated leaf's teeth from beads-on-a-line into a toothed edge.
+- **Composition scoring.** Every seed is a fresh roll and some land badly — a frost field
+  crowded into one corner, a stela with a bare top band. `quality.js` measures a few
+  candidate seeds and keeps the best-composed one. It scores only *extent* (does the
+  drawing use the sheet?) and *symmetry* (is the ink spread evenly?), never ink density:
+  scoring density ranks every circular composition below every rectangular one, because a
+  disc on portrait paper can only cover about 78% of it. The winner is an ordinary seed,
+  so a shared URL still redraws exactly the same page. The search is bounded by time
+  rather than by a candidate count, because the styles differ more than tenfold in cost.
 
 Notes on a few of the algorithms:
 

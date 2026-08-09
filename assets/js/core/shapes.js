@@ -2,6 +2,7 @@
 
 import { TAU, f, polar, smooth, poly, lerp } from './util.js';
 import { Sketch } from './sketch.js';
+import { layered } from './layer.js';
 
 /**
  * Pointed leaf with a midrib and optional veins.
@@ -23,31 +24,48 @@ export function leaf(sk, x, y, len, wid = 0.2, angle = 0, { veins = 2, serrated 
   const tip = at(1);
   const c1 = at(0.5, halfMax * 2);
   const c2 = at(0.5, -halfMax * 2);
-  sk.path(
-    `M${f(x)} ${f(y)}Q${f(c1.x)} ${f(c1.y)} ${f(tip.x)} ${f(tip.y)}Q${f(c2.x)} ${f(c2.y)} ${f(x)} ${f(y)}Z`,
-  );
-  sk.line(x, y, tip.x, tip.y, sk.w(0.72));
 
-  for (let i = 1; i <= veins; i++) {
-    const t = (i / (veins + 1)) * 0.8;
-    const te = Math.min(0.94, t + 0.24);
-    const base = at(t);
-    for (const s of [-1, 1]) {
-      const end = at(te, s * halfAt(te) * 0.78);
-      const ctrl = at((t + te) / 2, s * halfAt(te) * 0.3);
-      sk.path(`M${f(base.x)} ${f(base.y)}Q${f(ctrl.x)} ${f(ctrl.y)} ${f(end.x)} ${f(end.y)}`, sk.w(0.62));
-    }
-  }
+  const drawLeaf = (s) => {
+    s.path(
+      `M${f(x)} ${f(y)}Q${f(c1.x)} ${f(c1.y)} ${f(tip.x)} ${f(tip.y)}Q${f(c2.x)} ${f(c2.y)} ${f(x)} ${f(y)}Z`,
+    );
+    s.line(x, y, tip.x, tip.y, s.w(0.72));
 
-  if (serrated) {
-    for (const s of [-1, 1]) {
-      for (let i = 1; i < 5; i++) {
-        const t = i / 5;
-        const p = at(t, s * halfAt(t));
-        sk.circle(p.x, p.y, len * 0.03, sk.w(0.6));
+    // Veins live inside a shape only 2·halfMax across. Below about three pen
+    // widths there is no room for them and they close the leaf up into a solid
+    // blot, which is what turned the wreath's smallest sprigs black.
+    if (halfMax * 2 < s.refStroke * 3) return;
+
+    for (let i = 1; i <= veins; i++) {
+      const t = (i / (veins + 1)) * 0.8;
+      const te = Math.min(0.94, t + 0.24);
+      const base = at(t);
+      for (const sgn of [-1, 1]) {
+        const end = at(te, sgn * halfAt(te) * 0.78);
+        const ctrl = at((t + te) / 2, sgn * halfAt(te) * 0.3);
+        s.path(`M${f(base.x)} ${f(base.y)}Q${f(ctrl.x)} ${f(ctrl.y)} ${f(end.x)} ${f(end.y)}`, s.w(0.62));
       }
     }
-  }
+
+    if (serrated) {
+      for (const sgn of [-1, 1]) {
+        for (let i = 1; i < 5; i++) {
+          const t = i / 5;
+          const p = at(t, sgn * halfAt(t));
+          s.circle(p.x, p.y, len * 0.03);
+        }
+      }
+    }
+  };
+
+  /*
+   * Serration is drawn as small circles sitting astride the outline, which on
+   * its own gives a row of beads with the leaf edge running through every one
+   * of them. Merging the outline and the teeth into a single silhouette turns
+   * them into what they were always meant to be: a toothed edge.
+   */
+  if (serrated) layered(sk, [{ merge: true, draw: drawLeaf }]);
+  else drawLeaf(sk);
 }
 
 /** Round-petalled bloom seen face-on. */
@@ -84,23 +102,52 @@ export function flower(sk, cx, cy, r, petals, { inner = true, dots = true, round
   }
 }
 
-/** Many-layered rosette — denser than `flower`, good as a focal point. */
+/**
+ * Many-layered rosette — denser than `flower`, good as a focal point.
+ *
+ * Every petal runs from the exact centre to the rim, so they overlap heavily
+ * and each ring crosses the one beneath it. Drawn plainly that turns the middle
+ * into a solid knot of ink with nothing colourable in it, so the petals are
+ * layered: each one hides the part of its neighbours that it covers, the way
+ * real petals do.
+ */
 export function rosette(sk, cx, cy, r, rng) {
   const layers = rng.int(2, 3);
+  const petals = [];
+
   for (let l = 0; l < layers; l++) {
     const rr = r * (1 - l * 0.28);
-    const n = rng.pick([6, 8, 10, 12]) + l * 2;
+    const wanted = rng.pick([6, 8, 10, 12]) + l * 2;
+
+    /*
+     * Thin the ring until its petals are wider than the pen. A petal's widest
+     * point is about 2·rr·0.78·sin(π/n) across, so past a certain count the
+     * outlines meet in the middle and the ring fills in solid — the same way a
+     * snowflake's arms do. Judged against the boldest pen on offer, so the
+     * choice of pen cannot change the drawing.
+     */
+    const roomiest = 2 * rr * 0.78;
+    const limit = Math.floor(Math.PI / Math.asin(Math.min(1, (sk.refStroke * 2.4) / roomiest)));
+    const n = Math.min(wanted, limit);
+    if (n < 5) continue;
+
     const step = TAU / n;
     const phase = l * step * 0.5;
+    const weight = sk.w(l ? 0.8 : 1);
     for (let i = 0; i < n; i++) {
       const a = i * step + phase;
       const tip = polar(cx, cy, rr, a);
       const c1 = polar(cx, cy, rr * 0.78, a - step * 0.5);
       const c2 = polar(cx, cy, rr * 0.78, a + step * 0.5);
-      sk.path(`M${f(cx)} ${f(cy)}Q${f(c1.x)} ${f(c1.y)} ${f(tip.x)} ${f(tip.y)}Q${f(c2.x)} ${f(c2.y)} ${f(cx)} ${f(cy)}Z`, sk.w(l ? 0.8 : 1));
+      const d = `M${f(cx)} ${f(cy)}Q${f(c1.x)} ${f(c1.y)} ${f(tip.x)} ${f(tip.y)}Q${f(c2.x)} ${f(c2.y)} ${f(cx)} ${f(cy)}Z`;
+      petals.push((s) => s.path(d, weight));
     }
   }
-  sk.circle(cx, cy, r * 0.16);
+
+  // The boss sits in front of every petal tip, tidying the centre they all
+  // converge on.
+  petals.push((s) => s.circle(cx, cy, r * 0.16));
+  layered(sk, petals);
 }
 
 /** Archimedean spiral. */
@@ -125,15 +172,25 @@ export function scallops(sk, cx, cy, r, n, depth, sweep = 0) {
   }
 }
 
-/** Berry cluster / seed pod. */
+/**
+ * Berry cluster / seed pod.
+ *
+ * Berries in a cluster touch and overlap. Each one is drawn in front of the
+ * last so the cluster reads as a heap of round things rather than a diagram of
+ * intersecting circles.
+ */
 export function berries(sk, cx, cy, r, count, rng) {
+  const each = [];
   for (let i = 0; i < count; i++) {
     const a = (i / count) * TAU + rng.range(-0.3, 0.3);
     const p = polar(cx, cy, r * rng.range(0.5, 1), a);
     const rr = r * rng.range(0.3, 0.46);
-    sk.circle(p.x, p.y, rr);
-    sk.circle(p.x - rr * 0.3, p.y - rr * 0.3, rr * 0.22, sk.w(0.6));
+    each.push((s) => {
+      s.circle(p.x, p.y, rr);
+      s.circle(p.x - rr * 0.3, p.y - rr * 0.3, rr * 0.22, s.w(0.6));
+    });
   }
+  layered(sk, each);
 }
 
 /** Closed wobbly ring: radius modulated by a sine — the base of many bands. */

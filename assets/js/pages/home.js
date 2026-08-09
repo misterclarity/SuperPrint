@@ -15,7 +15,7 @@ const showcase = document.getElementById('style-showcase');
  * rather than two.
  */
 const HERO_SEARCH = { budgetMs: 90, max: 6 };
-const CARD_SEARCH = { budgetMs: 20, max: 3 };
+const CARD_SEARCH = { budgetMs: 20, max: 3, min: 1 };
 
 function heroDesigns() {
   const rng = makeRng(randomSeed());

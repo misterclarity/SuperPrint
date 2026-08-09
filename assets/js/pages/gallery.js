@@ -17,8 +17,12 @@ let active = 'all';
  * grid paints, so each tile gets a small slice rather than the full budget.
  * Even three candidates removes most of the lopsided rolls, and the gallery is
  * where they were most visible — a wall of tiles makes a bad one obvious.
+ *
+ * The cheap styles get their three; the two or three that cost more to draw
+ * than the whole budget get one and go straight up, which keeps a fresh batch
+ * from stalling on them.
  */
-const TILE_SEARCH = { budgetMs: 20, max: 3 };
+const TILE_SEARCH = { budgetMs: 20, max: 3, min: 1 };
 
 function makeParams(rng) {
   const pool = active === 'all' ? STYLES : STYLES.filter((s) => s.id === active);

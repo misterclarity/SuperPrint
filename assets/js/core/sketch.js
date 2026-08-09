@@ -46,6 +46,26 @@ export class Sketch {
     return this;
   }
 
+  /**
+   * Run `fn` and return the markup it drew instead of keeping it on the sheet.
+   *
+   * Motifs are written as a sequence of drawing calls, which is the right way
+   * to write them but leaves the caller with no handle on the resulting shape.
+   * Capturing gives one back: a generator can draw a leaf, take its outline,
+   * and use it to knock a hole in whatever the leaf lies on top of before
+   * putting both down. Nothing reaches the sheet until the caller emits it.
+   */
+  capture(fn) {
+    const held = this.parts;
+    this.parts = [];
+    try {
+      fn(this);
+      return this.parts.join('');
+    } finally {
+      this.parts = held;
+    }
+  }
+
   open(transform, extra = {}) {
     this.parts.push(`<g${transform ? ` transform="${transform}"` : ''}${attrs(extra)}>`);
     return this;

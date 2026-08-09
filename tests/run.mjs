@@ -6,6 +6,7 @@ import bounds from './bounds.test.mjs';
 import closedShapes from './closed-shapes.test.mjs';
 import lineWeight from './line-weight.test.mjs';
 import quality from './quality.test.mjs';
+import clip from './clip.test.mjs';
 
 const suites = [
   ['generators', generators],
@@ -13,6 +14,7 @@ const suites = [
   ['closed shapes', closedShapes],
   ['line weight', lineWeight],
   ['composition scoring', quality],
+  ['clipping and layering', clip],
 ];
 
 let total = 0;
