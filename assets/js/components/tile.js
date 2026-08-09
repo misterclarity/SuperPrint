@@ -21,7 +21,10 @@ function aspectClass(paper) {
 
 /**
  * @param {object} params design parameters
- * @param {{onRemove?: Function}} [opts]
+ * @param {{onRemove?: Function, svg?: string}} [opts]
+ *   `svg` reuses artwork the caller has already rendered for these exact
+ *   params — the gallery scores candidates before it picks one, and drawing the
+ *   winner a second time would be pure waste.
  * @returns {HTMLElement}
  */
 export function createTile(params, opts = {}) {
@@ -45,7 +48,7 @@ export function createTile(params, opts = {}) {
       </div>
     </div>`;
 
-  el.querySelector('.tile-art').innerHTML = buildSVG(p);
+  el.querySelector('.tile-art').innerHTML = opts.svg || buildSVG(p);
 
   const saveBtn = el.querySelector('[data-act="save"]');
   const paintSave = () => {

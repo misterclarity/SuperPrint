@@ -1,5 +1,5 @@
-import { buildSVG } from '../core/render.js';
 import { randomSeed, makeRng } from '../core/rng.js';
+import { pickBest } from '../core/quality.js';
 import { STYLES } from '../gen/index.js';
 import { studioURL } from '../components/tile.js';
 import { ICONS } from '../ui.js';
@@ -7,29 +7,41 @@ import { ICONS } from '../ui.js';
 const heroStack = document.getElementById('hero-stack');
 const showcase = document.getElementById('style-showcase');
 
+/*
+ * The three sheets in the hero and the twelve style cards below are the first
+ * drawings anyone sees, so they are worth choosing rather than taking blind.
+ * Each is picked from a few candidate seeds by composition; the winner's
+ * artwork comes back with it, so the choosing costs one extra render apiece
+ * rather than two.
+ */
+const HERO_SEARCH = { budgetMs: 90, max: 6 };
+const CARD_SEARCH = { budgetMs: 20, max: 3 };
+
 function heroDesigns() {
   const rng = makeRng(randomSeed());
-  const picks = rng.sample(STYLES, 3);
-  return picks.map((s) => ({
-    style: s.id,
-    seed: randomSeed(),
-    complexity: rng.int(3, 5),
-    paper: 'letter',
-    weight: 'medium',
-    frame: rng.pick(['thin', 'none', 'double']),
-    caption: false,
-  }));
+  return rng.sample(STYLES, 3).map((s) => {
+    const p = {
+      style: s.id,
+      complexity: rng.int(3, 5),
+      paper: 'letter',
+      weight: 'medium',
+      frame: rng.pick(['thin', 'none', 'double']),
+      caption: false,
+    };
+    const won = pickBest(p, HERO_SEARCH);
+    return { params: { ...p, seed: won.seed }, svg: won.svg };
+  });
 }
 
 function paintHero() {
   if (!heroStack) return;
   heroStack.innerHTML = '';
-  for (const d of heroDesigns()) {
+  for (const { params, svg } of heroDesigns()) {
     const sheet = document.createElement('a');
     sheet.className = 'sheet';
-    sheet.href = studioURL(d);
-    sheet.setAttribute('aria-label', `Open this ${d.style} design in the studio`);
-    sheet.innerHTML = buildSVG(d);
+    sheet.href = studioURL(params);
+    sheet.setAttribute('aria-label', `Open this ${params.style} design in the studio`);
+    sheet.innerHTML = svg;
     heroStack.appendChild(sheet);
   }
 }
@@ -39,15 +51,16 @@ function paintShowcase() {
   const rng = makeRng(randomSeed());
   showcase.innerHTML = '';
   for (const style of STYLES) {
-    const params = {
+    const base = {
       style: style.id,
-      seed: randomSeed(),
       complexity: rng.int(3, 4),
       paper: 'letter',
       weight: 'medium',
       frame: 'thin',
       caption: false,
     };
+    const won = pickBest(base, CARD_SEARCH);
+    const params = { ...base, seed: won.seed };
     const card = document.createElement('article');
     card.className = 'tile';
     card.innerHTML = `
@@ -64,7 +77,7 @@ function paintShowcase() {
           <a class="btn btn-dark btn-sm" href="${studioURL(params)}">Make one</a>
         </div>
       </div>`;
-    card.querySelector('.tile-art').innerHTML = buildSVG(params);
+    card.querySelector('.tile-art').innerHTML = won.svg;
     showcase.appendChild(card);
   }
 }

@@ -5,12 +5,14 @@ import generators from './generators.test.mjs';
 import bounds from './bounds.test.mjs';
 import closedShapes from './closed-shapes.test.mjs';
 import lineWeight from './line-weight.test.mjs';
+import quality from './quality.test.mjs';
 
 const suites = [
   ['generators', generators],
   ['page bounds', bounds],
   ['closed shapes', closedShapes],
   ['line weight', lineWeight],
+  ['composition scoring', quality],
 ];
 
 let total = 0;

@@ -1,5 +1,6 @@
 import { STYLES } from '../gen/index.js';
 import { makeRng, randomSeed } from '../core/rng.js';
+import { pickBest } from '../core/quality.js';
 import { createTile } from '../components/tile.js';
 import { ICONS } from '../ui.js';
 
@@ -11,24 +12,36 @@ const freshBtn = document.getElementById('fresh-batch');
 const BATCH = 12;
 let active = 'all';
 
+/*
+ * A tighter search than the studio's: a dozen of these are built before the
+ * grid paints, so each tile gets a small slice rather than the full budget.
+ * Even three candidates removes most of the lopsided rolls, and the gallery is
+ * where they were most visible — a wall of tiles makes a bad one obvious.
+ */
+const TILE_SEARCH = { budgetMs: 20, max: 3 };
+
 function makeParams(rng) {
   const pool = active === 'all' ? STYLES : STYLES.filter((s) => s.id === active);
   const style = rng.pick(pool);
-  return {
+  const p = {
     style: style.id,
-    seed: randomSeed(),
     complexity: rng.int(2, 5),
     paper: 'letter',
     weight: rng.bool(0.75) ? 'medium' : rng.pick(['fine', 'bold']),
     frame: rng.pick(['thin', 'thin', 'none', 'double', 'rounded']),
     caption: true,
   };
+  const won = pickBest(p, TILE_SEARCH);
+  return { params: { ...p, seed: won.seed }, svg: won.svg };
 }
 
 function appendBatch(count = BATCH) {
   const rng = makeRng(randomSeed());
   const frag = document.createDocumentFragment();
-  for (let i = 0; i < count; i++) frag.appendChild(createTile(makeParams(rng)));
+  for (let i = 0; i < count; i++) {
+    const { params, svg } = makeParams(rng);
+    frag.appendChild(createTile(params, { svg }));
+  }
   grid.appendChild(frag);
 }
 

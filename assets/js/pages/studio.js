@@ -3,6 +3,7 @@
 import { STYLES, getStyle } from '../gen/index.js';
 import { buildSVG, normalize, PAPERS, WEIGHTS, FRAMES, COMPLEXITY_LABELS, DEFAULTS } from '../core/render.js';
 import { randomSeed, makeRng } from '../core/rng.js';
+import { pickBestSeed } from '../core/quality.js';
 import { downloadPNG, downloadSVG, printDesign, copyLink } from '../core/export.js';
 import * as store from '../core/store.js';
 import { ICONS, toast } from '../ui.js';
@@ -36,7 +37,9 @@ function paramsFromURL() {
   for (const k of Object.keys(DEFAULTS)) {
     if (q.has(k)) raw[k] = q.get(k);
   }
-  if (!q.has('seed')) raw.seed = randomSeed();
+  // A link that names a seed is honoured exactly; only an unseeded arrival —
+  // someone opening the studio fresh — gets a chosen one.
+  if (!q.has('seed')) return normalize({ ...raw, seed: pickBestSeed(normalize(raw)) });
   return normalize(raw);
 }
 
@@ -226,8 +229,16 @@ function askForSupport() {
   if (dialog && typeof dialog.showModal === 'function') dialog.showModal();
 }
 
+/*
+ * A new seed, chosen from a handful of candidates rather than taken blind.
+ *
+ * The dice are still the dice — every candidate is an ordinary random seed and
+ * the winner redraws exactly as it would have. This only skips the rolls that
+ * land lopsided, which is the difference between "shuffle until something
+ * decent turns up" and "press once".
+ */
 function newSeed() {
-  const seed = randomSeed();
+  const seed = pickBestSeed(params);
   els.seedInput.value = seed;
   set({ seed });
 }
@@ -262,7 +273,8 @@ function wire() {
   els.surprise.addEventListener('click', () => {
     const rng = makeRng(randomSeed());
     const style = rng.pick(STYLES).id;
-    set({ style, seed: randomSeed(), complexity: rng.int(2, 5) });
+    const complexity = rng.int(2, 5);
+    set({ style, complexity, seed: pickBestSeed({ ...params, style, complexity }) });
     els.seedInput.value = params.seed;
     els.complexity.value = String(params.complexity);
     els.complexityLabel.textContent = COMPLEXITY_LABELS[params.complexity];
