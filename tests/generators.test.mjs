@@ -8,11 +8,24 @@
 import { STYLES } from '../assets/js/gen/index.js';
 import { buildSVG, PAPERS, WEIGHTS, FRAMES } from '../assets/js/core/render.js';
 import { randomSeed, makeRng } from '../assets/js/core/rng.js';
+import { measureDesign } from '../assets/js/core/quality.js';
 
 const PAPER_IDS = Object.keys(PAPERS);
 const WEIGHT_IDS = Object.keys(WEIGHTS);
 const FRAME_IDS = Object.keys(FRAMES);
-const MIN_MARKS = 12;
+
+/*
+ * "Did the page come out nearly empty?" measured as drawn line length, in user
+ * units — a hundred to the inch, so this is around thirty inches of ink.
+ *
+ * It used to count elements instead, which worked until a style could draw a
+ * whole page in a single path: a dragon curve is one <path> holding a couple of
+ * thousand segments, and by element count it looked like a blank sheet. Length
+ * is what "empty" actually means. The thinnest real page measures about seven
+ * thousand, so this sits well clear of anything legitimate while still catching
+ * a generator that has stopped drawing.
+ */
+const MIN_INK = 3000;
 
 export default function run() {
   const failures = [];
@@ -55,16 +68,19 @@ export default function run() {
         const broken = drawing.match(/NaN|Infinity|undefined/);
         if (broken) failures.push(`${style.id} ${params.seed}: emitted "${broken[0]}"`);
 
-        const marks = (svg.match(/<(path|circle|ellipse|line|rect|polyline)\b/g) || []).length;
-        if (marks < MIN_MARKS) {
-          failures.push(`${style.id} c=${complexity} ${params.seed}: only ${marks} marks`);
+        const ink = measureDesign(params).ink;
+        if (ink < MIN_INK) {
+          failures.push(`${style.id} c=${complexity} ${params.seed}: only ${Math.round(ink)} units of ink`);
         }
-        min = Math.min(min, marks);
-        max = Math.max(max, marks);
+        min = Math.min(min, ink);
+        max = Math.max(max, ink);
       }
     }
 
-    table[style.id] = { marks: `${min}-${max}`, 'avg ms': +(ms / n).toFixed(1) };
+    table[style.id] = {
+      ink: `${Math.round(min)}-${Math.round(max)}`,
+      'avg ms': +(ms / n).toFixed(1),
+    };
   }
 
   // The same inputs must always produce byte-identical output: shared links and

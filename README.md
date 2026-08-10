@@ -10,7 +10,7 @@ drop-in fit for GitHub Pages.
 ## Features
 
 - **Twelve drawing styles** — Mandala, Kaleidoscope, Stained Glass, Botanical Wreath,
-  Bloom Field, Frost Field, Folk Weave, Glyph Stela, Geometric Tiles, Celtic Weave,
+  Bloom Field, Frost Field, Folk Weave, Fractal Forms, Geometric Tiles, Celtic Weave,
   Pattern Bands and Contour Map.
 - **Reproducible seeds.** A design is a pure function of `(style, seed, settings)`, so the
   same inputs always redraw the identical page. Seeds are human-readable
@@ -46,7 +46,7 @@ npm run serve      # python3 -m http.server 8080
 npm test
 ```
 
-Two suites, both plain Node with no test framework:
+Seven suites, all plain Node with no test framework:
 
 - `tests/generators.test.mjs` — renders every style across all complexity levels, paper
   sizes, line weights and borders, asserting well-formed SVG, no `NaN`/`undefined` in the
@@ -54,6 +54,18 @@ Two suites, both plain Node with no test framework:
 - `tests/bounds.test.mjs` — asserts no artwork strays off the sheet. Off-page geometry is
   invisible on screen because the SVG clips it, but shows up as clipped or crossing lines
   on paper.
+- `tests/closed-shapes.test.mjs` — a bare stroke encloses no area, so Frost Field must be
+  built entirely from closed outlines or there is nothing to put colour into.
+- `tests/line-weight.test.mjs` — changing the pen must change only how thick the ink is,
+  never what is drawn. Renders each design at every weight, strips the widths, and
+  requires what is left to be identical.
+- `tests/quality.test.mjs` — composition scoring, including the guarantee that it has no
+  opinion about shape: a disc and a rectangle that both fill the sheet must score alike.
+- `tests/clip.test.mjs` — path flattening and polygon clipping, against perimeters worked
+  out in advance, with the awkward cases pinned: coincident edges, shapes touching only at
+  a corner, a subject wholly hidden, one wholly clear.
+- `tests/fractal.test.mjs` — recursion depth stops before the pen runs out, and the limit
+  tracks the room available rather than being a hard-coded number.
 
 ## Deploying to GitHub Pages
 
@@ -107,7 +119,8 @@ Two passes sit between the generators and the page:
   outlines into one silhouette where the pieces are meant to read as a single shape —
   that is what turns a serrated leaf's teeth from beads-on-a-line into a toothed edge.
 - **Composition scoring.** Every seed is a fresh roll and some land badly — a frost field
-  crowded into one corner, a stela with a bare top band. `quality.js` measures a few
+  crowded into one corner, a scatter that leaves one half of the sheet bare. `quality.js`
+  measures a few
   candidate seeds and keeps the best-composed one. It scores only *extent* (does the
   drawing use the sheet?) and *symmetry* (is the ink spread evenly?), never ink density:
   scoring density ranks every circular composition below every rectangular one, because a
@@ -142,18 +155,22 @@ Notes on a few of the algorithms:
   eye: a Koch edge is `r/3^depth` across, and left unchecked the smaller flakes fill in
   solid black. Every element is a closed outline — a bare stroke encloses no area, so
   there would be nothing to colour, which `tests/closed-shapes.test.mjs` asserts.
-- **Glyph Stela** reproduces the *structure* of Classic Maya inscriptions and fills it
-  with invented signs. **These are not real Maya glyphs and they spell nothing** — Maya
-  script is a living heritage with a largely deciphered vocabulary, so inventing readable
-  text would be a forgery and freehand "hieroglyphic-looking" doodles would be a
-  caricature. What the generator follows is the documented grammar: glyph blocks square
-  in outline but with rounded corners; one large main sign per block plus narrow affixes
-  (roughly 2:1–3:1) in the superfix, prefix, postfix and subfix slots; main signs in
-  either abstract or head-variant (profile) form; blocks laid out in paired columns,
-  which read in a zigzag A1→B1→A2→B2; bar-and-dot coefficients (dot 1, bar 5, shell 0)
-  attached as prefixes; and day signs set in a pedestalled cartouche. Sign interiors are
-  assembled from the formal vocabulary the catalogues describe — enclosing outlines,
-  crossed bands, scroll volutes, dotted bands, brackets, hatching and spots.
+- **Fractal Forms** draws six families that are each built by applying one rule to their
+  own output: the Sierpinski triangle and carpet, nested Koch snowflakes, the dragon
+  curve, a Pythagoras tree, and an Apollonian gasket. The gasket is packed using
+  Descartes' circle theorem — given three mutually tangent circles, the curvature of a
+  fourth tangent to all three is `k4 = k1 + k2 + k3 ± 2√(k1k2 + k2k3 + k3k1)`, and its
+  complex companion places the centre; the outer circle carries a negative curvature
+  because it contains the rest rather than touching them from outside. Depth is never a
+  free parameter: detail multiplies two- or threefold per level, so one step too far
+  fills a figure in solid, and each family derives its ceiling from the size of its own
+  smallest feature against the widest pen on offer. `tests/fractal.test.mjs` checks that
+  the ceiling really does track the space available — a depth limit that is merely a
+  hard-coded number passes the obvious test and still fills in solid on a small tile.
+  Which families can show their construction step by step was settled by measurement
+  rather than taste: a quarter-page cell has room for about four levels of the fastest-
+  shrinking figure and two or three of the rest, so only the triangle and the gasket
+  visibly change at every step, and only those appear in the four-cell progressions.
 
 ## Licence
 

@@ -7,6 +7,7 @@ import closedShapes from './closed-shapes.test.mjs';
 import lineWeight from './line-weight.test.mjs';
 import quality from './quality.test.mjs';
 import clip from './clip.test.mjs';
+import fractal from './fractal.test.mjs';
 
 const suites = [
   ['generators', generators],
@@ -15,6 +16,7 @@ const suites = [
   ['line weight', lineWeight],
   ['composition scoring', quality],
   ['clipping and layering', clip],
+  ['fractal depth limits', fractal],
 ];
 
 let total = 0;
