@@ -1,19 +1,25 @@
 /*
- * Cats & Dogs — portraits assembled from parts rather than traced from photos.
+ * Animals — cats, dogs and fish, assembled from parts rather than traced.
  *
- * Every face is authored in a unit circle at the origin and placed afterwards,
- * which keeps each proportion a plain fraction of head size: eyes 0.16 above
- * centre and 0.44 out, nose at 0.3 below, ears springing from the top of the
- * skull. Reading the numbers tells you the face.
+ * Everything is authored in unit space at the origin and placed afterwards,
+ * which keeps each proportion a plain fraction of the animal's size: a cat's
+ * eyes 0.16 above centre and 0.44 out, its nose at 0.3 below. Reading the
+ * numbers tells you the face.
  *
  * The transform is applied to the points, not by wrapping the drawing in a
  * scaled group — a group would scale the stroke widths with it, and a portrait
  * placed at 200 units would come out drawn with a 200-unit pen.
  *
- * The two species differ in the places they actually differ. A cat's head is
- * wider at the cheeks than it is tall, with high triangular ears, a small wedge
- * nose and two whisker pads meeting under it. A dog's is longer, with a muzzle
- * that steps forward off the skull and ears that either hang or stand.
+ * Cats and dogs are drawn as head-and-shoulders portraits facing the viewer,
+ * because that is how you meet one. They differ in the places they actually
+ * differ: a cat's head is one rounded mass, wider at the cheeks than it is
+ * tall, with high triangular ears and whisker pads meeting under a small wedge
+ * nose; a dog's skull narrows at the cheeks and a snout steps forward out of
+ * the silhouette.
+ *
+ * A fish gets a different treatment altogether. Face-on it is a sliver with two
+ * eyes and nothing else, so it is drawn in profile, whole, and swims across the
+ * page in a shoal. Its scales are what make it worth colouring.
  */
 
 import { TAU, f, poly, smooth, lerp } from '../core/util.js';
@@ -26,8 +32,14 @@ import { layered } from '../core/layer.js';
  * A pen that takes unit-space geometry and puts it on the page at a given
  * centre and size.
  */
-function scene(sk, cx, cy, r) {
-  const P = (p) => ({ x: cx + p.x * r, y: cy + p.y * r });
+function scene(sk, cx, cy, r, flip = 1) {
+  /*
+   * `flip` mirrors about the vertical axis. It has to be applied to x alone:
+   * scaling both axes by −1 is a half turn, not a mirror, and it also makes
+   * every radius negative, which silently drops each circle — that is how a
+   * fish came to be swimming the other way with no eye.
+   */
+  const P = (p) => ({ x: cx + p.x * r * flip, y: cy + p.y * r });
   return {
     /** Straight-sided shape. */
     poly: (pts, w = 1, close = true) => sk.path(poly(pts.map(P), close), sk.w(w)),
@@ -35,7 +47,7 @@ function scene(sk, cx, cy, r) {
     blob: (pts, w = 1) => sk.path(smooth(pts.map(P), true), sk.w(w)),
     /** Smoothed open line, for whiskers and mouths. */
     curve: (pts, w = 1) => sk.path(smooth(pts.map(P), false), sk.w(w)),
-    circle: (x, y, rad, w = 1) => sk.circle(cx + x * r, cy + y * r, rad * r, sk.w(w)),
+    circle: (x, y, rad, w = 1) => sk.circle(cx + x * r * flip, cy + y * r, rad * r, sk.w(w)),
     /** True when a detail is too small to survive the widest pen on offer. */
     fits: (size) => size * r > sk.refStroke * 2.4,
   };
@@ -445,6 +457,216 @@ function bodyCoat(g, face, rng, coat, foot, spread) {
   }
 }
 
+
+/* ------------------------------------------------------------------ fish -- */
+
+/**
+ * A fish in profile, nose at +1 and tail off to the left, its body a fraction
+ * `depth` deep. Everything else hangs off that outline.
+ *
+ * Drawn side-on because face-on a fish is a sliver: two eyes, a mouth, and no
+ * silhouette worth the name. In profile it is all silhouette.
+ */
+function fishBody(rng) {
+  const depth = rng.range(0.5, 0.86);
+  const tail = rng.pick(['forked', 'forked', 'fan', 'veil']);
+
+  const outline = [
+    { x: 1.02, y: 0 },
+    { x: 0.66, y: -depth * 0.72 },
+    { x: 0.12, y: -depth },
+    { x: -0.44, y: -depth * 0.82 },
+    { x: -0.84, y: -depth * 0.34 },
+    { x: -0.84, y: depth * 0.34 },
+    { x: -0.44, y: depth * 0.82 },
+    { x: 0.12, y: depth },
+    { x: 0.66, y: depth * 0.72 },
+  ];
+
+  return {
+    kind: 'fish',
+    depth,
+    tail,
+    outline,
+    eye: { x: 0.62, y: -depth * 0.3, r: rng.range(0.1, 0.14) },
+    coat: rng.pick(['scales', 'scales', 'stripes', 'spots', 'plain']),
+    flip: rng.bool(0.5) ? -1 : 1,
+  };
+}
+
+function drawFishFins(g, fish) {
+  const d = fish.depth;
+
+  // Tail, hinged at the wrist behind the body.
+  const wrist = -0.84;
+  if (fish.tail === 'forked') {
+    g.blob([
+      { x: wrist, y: -d * 0.34 },
+      { x: wrist - 0.62, y: -d * 1.15 },
+      { x: wrist - 0.42, y: 0 },
+      { x: wrist - 0.62, y: d * 1.15 },
+      { x: wrist, y: d * 0.34 },
+    ], 1.05);
+  } else if (fish.tail === 'fan') {
+    g.blob([
+      { x: wrist, y: -d * 0.34 },
+      { x: wrist - 0.5, y: -d * 1.05 },
+      { x: wrist - 0.66, y: 0 },
+      { x: wrist - 0.5, y: d * 1.05 },
+      { x: wrist, y: d * 0.34 },
+    ], 1.05);
+  } else {
+    // A veiltail: long, drooping, and worth colouring on its own.
+    g.blob([
+      { x: wrist, y: -d * 0.34 },
+      { x: wrist - 0.72, y: -d * 1.2 },
+      { x: wrist - 0.98, y: -d * 0.3 },
+      { x: wrist - 0.86, y: d * 0.7 },
+      { x: wrist - 0.5, y: d * 1.15 },
+      { x: wrist, y: d * 0.34 },
+    ], 1.05);
+  }
+  // Rays fanning out from the wrist.
+  for (let i = -2; i <= 2; i++) {
+    const t = i / 2;
+    g.poly([
+      { x: wrist - 0.04, y: d * 0.3 * t },
+      { x: wrist - 0.52, y: d * 1.0 * t },
+    ], 0.6, false);
+  }
+
+  // Dorsal fin along the back, and its mirror below.
+  g.blob([
+    { x: 0.34, y: -d * 0.92 },
+    { x: 0.06, y: -d - 0.34 },
+    { x: -0.42, y: -d - 0.22 },
+    { x: -0.6, y: -d * 0.62 },
+  ], 1);
+  for (let i = 0; i < 3; i++) {
+    const t = (i + 1) / 4;
+    g.poly([
+      { x: lerp(0.34, -0.6, t), y: lerp(-d * 0.92, -d * 0.62, t) },
+      { x: lerp(0.06, -0.42, t), y: lerp(-d - 0.34, -d - 0.22, t) },
+    ], 0.6, false);
+  }
+
+  g.blob([
+    { x: -0.1, y: d * 0.94 },
+    { x: -0.3, y: d + 0.28 },
+    { x: -0.62, y: d * 0.86 },
+  ], 0.95);
+
+  // Pectoral fin, on the near flank.
+  g.blob([
+    { x: 0.36, y: d * 0.14 },
+    { x: 0.02, y: d * 0.62 },
+    { x: 0.06, y: d * 0.08 },
+  ], 0.9);
+}
+
+function drawFishFace(g, fish) {
+  const d = fish.depth;
+  const e = fish.eye;
+  g.circle(e.x, e.y, e.r, 1);
+  g.circle(e.x - e.r * 0.16, e.y, e.r * 0.5, 0.8);
+  if (g.fits(e.r * 0.4)) g.circle(e.x - e.r * 0.42, e.y - e.r * 0.34, e.r * 0.2, 0.6);
+
+  // Mouth at the snout.
+  g.curve([
+    { x: 1.0, y: 0.02 },
+    { x: 0.86, y: d * 0.18 },
+    { x: 0.72, y: d * 0.2 },
+  ], 0.8);
+
+  // Gill cover: an arc sweeping back from behind the eye.
+  g.curve([
+    { x: 0.5, y: -d * 0.66 },
+    { x: 0.34, y: 0 },
+    { x: 0.48, y: d * 0.62 },
+  ], 0.85);
+}
+
+/** The coat, carried across the flank and clipped to the body. */
+function fishCoat(g, fish) {
+  const d = fish.depth;
+  if (fish.coat === 'scales') {
+    /*
+     * Overlapping arcs in offset rows — the best thing on the page to put
+     * colour into, and the reason a fish earns its place here. Drawn at a third
+     * of this size they came out as a knitted texture: visibly a pattern, but
+     * with no single scale big enough to hold a pencil.
+     */
+    const step = 0.34;
+    let row = 0;
+    for (let y = -d - step * 0.5; y <= d + step; y += step * 0.66, row++) {
+      for (let x = -0.9 + (row % 2) * step * 0.5; x < 1.1; x += step) {
+        g.curve([
+          { x, y },
+          { x: x + step * 0.5, y: y + step * 0.52 },
+          { x: x + step, y },
+        ], 0.7);
+      }
+    }
+  } else if (fish.coat === 'stripes') {
+    for (let x = -0.7; x < 0.95; x += 0.3) {
+      g.curve([
+        { x, y: -d * 1.1 },
+        { x: x + 0.1, y: 0 },
+        { x, y: d * 1.1 },
+      ], 0.75);
+    }
+  } else if (fish.coat === 'spots') {
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 6; col++) {
+        const x = -0.75 + col * 0.32 + (row % 2) * 0.16;
+        const y = -d * 0.75 + row * d * 0.5;
+        if (g.fits(0.18)) g.circle(x, y, 0.09, 0.7);
+      }
+    }
+  }
+}
+
+/** Bubbles rising from the fish, and weed along the floor. */
+function water(g, rng, box, r, cx, cy, shoal) {
+  const left = (box.x - cx) / r;
+  const right = (box.x + box.w - cx) / r;
+  const top = (box.y - cy) / r;
+  const bottom = (box.y + box.h - cy) / r;
+
+  const placed = [];
+  let guard = 0;
+  while (placed.length < rng.int(12, 20) && guard++ < 600) {
+    const rad = rng.range(0.05, 0.13);
+    const x = rng.range(left + rad * 2, right - rad * 2);
+    const y = rng.range(top + rad * 2, bottom - rad * 2);
+    if (shoal.some((s) => Math.abs(x - s.x) < s.w + rad * 1.5 && Math.abs(y - s.y) < s.h + rad * 1.5)) continue;
+    if (placed.some((q) => Math.hypot(q.x - x, q.y - y) < (q.rad + rad) * 2.6)) continue;
+    placed.push({ x, y, rad });
+    g.circle(x, y, rad, 0.7);
+    if (g.fits(rad * 0.7)) g.circle(x - rad * 0.3, y - rad * 0.34, rad * 0.26, 0.55);
+  }
+
+  /*
+   * Weed rising off the bottom edge, each frond a closed blade rather than a
+   * pair of lines — a bare stroke encloses nothing, and the floor of the tank
+   * is somewhere a colour ought to be able to go.
+   */
+  const blades = rng.int(5, 9);
+  for (let i = 0; i < blades; i++) {
+    const x = left + ((i + rng.range(0.15, 0.85)) / blades) * (right - left);
+    const h = rng.range(0.55, 1.5);
+    const sway = rng.range(-0.4, 0.4);
+    const w = rng.range(0.06, 0.11);
+    g.blob([
+      { x: x - w, y: bottom },
+      { x: x + sway - w * 0.7, y: bottom - h * 0.55 },
+      { x: x + sway * 0.5, y: bottom - h },
+      { x: x + sway + w * 0.7, y: bottom - h * 0.5 },
+      { x: x + w, y: bottom },
+    ], 0.75);
+  }
+}
+
 /* ------------------------------------------------------------- the scene -- */
 
 /** Shoulders behind the head, turning a floating face into a portrait. */
@@ -695,14 +917,86 @@ function portrait(sk, cx, cy, r, face, rng, box) {
   ].filter(Boolean));
 }
 
+/**
+ * A shoal: fish stacked down the page, each one flipped from the last.
+ *
+ * How many depends on the paper. A fish is about twice as wide as it is deep,
+ * so a portrait sheet takes three comfortably and a landscape one takes two;
+ * a single fish on a tall page leaves half of it empty.
+ */
+function shoal(sk, box, rng) {
+  /*
+   * Two on a tall sheet, one otherwise, and each sized to fill its band.
+   *
+   * Three fitted on a portrait page but left each one at barely half the
+   * width — a fish is roughly three times as long as it is deep once the tail
+   * and fins are counted, so stacking them costs width fast.
+   */
+  const count = box.h > box.w * 1.15 ? 2 : 1;
+  const bandH = box.h / count;
+  const fish = [];
+
+  for (let i = 0; i < count; i++) {
+    const f = fishBody(rng);
+    // The vertical extent is the body plus the dorsal and ventral fins, not
+    // the body alone, or the fins run out of the band.
+    const r = Math.min(box.w / 3.25, bandH / (f.depth * 2 + 1.2));
+    const cy = box.y + bandH * (i + 0.5);
+    const cx = box.x + box.w / 2 + rng.range(-0.2, 0.2) * box.w * 0.2;
+    fish.push({ f, r, cx, cy, flip: i % 2 ? -1 : 1 });
+  }
+
+  // In unit space of the first fish, for the bubble keep-out.
+  const base = fish[0];
+  /*
+   * The keep-out is the fish's true extent, not a generous box around it. The
+   * first version claimed 1.9 units of half-width where the whole sheet is only
+   * 1.7 wide, so every bubble was rejected and the water came out empty.
+   */
+  const keep = fish.map((o) => ({
+    x: (o.cx - base.cx) / base.r,
+    y: (o.cy - base.cy) / base.r,
+    w: (o.r / base.r) * 1.5,
+    h: (o.r / base.r) * (o.f.depth + 0.34),
+  }));
+
+  const layers = [{
+    occludes: false,
+    draw: (s) => water(scene(s, base.cx, base.cy, base.r), rng, box, base.r, base.cx, base.cy, keep),
+  }];
+
+  for (const o of fish) {
+    // The flip is baked into the scale, so the whole fish turns with it.
+    const G = (s) => scene(s, o.cx, o.cy, o.r, o.flip);
+    const bodyPoly = flattenPath(smooth(o.f.outline.map(
+      (p) => ({ x: o.cx + p.x * o.r * o.flip, y: o.cy + p.y * o.r }),
+    ), true))[0].points;
+
+    layers.push(
+      (s) => drawFishFins(G(s), o.f),
+      (s) => G(s).blob(o.f.outline, 1.35),
+      { occludes: false, within: [bodyPoly], draw: (s) => fishCoat(G(s), o.f) },
+      { occludes: false, draw: (s) => drawFishFace(G(s), o.f) },
+    );
+  }
+
+  layered(sk, layers);
+}
+
 export default {
-  id: 'pets',
-  name: 'Cats & Dogs',
-  blurb: 'Portraits of invented cats and dogs — every one a different face.',
+  id: 'animals',
+  name: 'Animals',
+  blurb: 'Invented cats, dogs and fish — portraits to colour, no two alike.',
   tags: ['animals', 'friendly', 'bold'],
 
   draw(sk, { rng, box }) {
-    const face = rng.bool(0.5) ? catFace(rng) : dogFace(rng);
+    const kind = rng.pick(['cat', 'cat', 'dog', 'dog', 'fish', 'fish']);
+    if (kind === 'fish') {
+      shoal(sk, box, rng);
+      return;
+    }
+
+    const face = kind === 'cat' ? catFace(rng) : dogFace(rng);
     // Sized so the ears clear the top and the shoulders reach the bottom, and
     // set high in the box because a portrait is mostly head.
     const r = Math.min(box.w / 2.9, box.h / 4.4);

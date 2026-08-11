@@ -10,7 +10,7 @@ drop-in fit for GitHub Pages.
 ## Features
 
 - **Twelve drawing styles** — Mandala, Kaleidoscope, Stained Glass, Botanical Wreath,
-  Bloom Field, Frost Field, Folk Weave, Fractal Forms, Cats & Dogs, Celtic Weave,
+  Bloom Field, Frost Field, Folk Weave, Fractal Forms, Animals, Celtic Weave,
   Pattern Bands and Contour Map.
 - **Reproducible seeds.** A design is a pure function of `(style, seed, settings)`, so the
   same inputs always redraw the identical page. Seeds are human-readable
@@ -156,16 +156,23 @@ Notes on a few of the algorithms:
   eye: a Koch edge is `r/3^depth` across, and left unchecked the smaller flakes fill in
   solid black. Every element is a closed outline — a bare stroke encloses no area, so
   there would be nothing to colour, which `tests/closed-shapes.test.mjs` asserts.
-- **Cats & Dogs** builds portraits from parts rather than tracing photographs. Faces are
-  authored in a unit circle at the origin, so every proportion is a plain fraction of head
-  size and reading the numbers tells you the face. The two species are separated where
-  they actually differ: a cat's head is one rounded mass, wider at the cheeks than it is
-  tall, with high triangular ears and whisker pads meeting under a small wedge nose; a
-  dog's skull narrows at the cheeks and a snout steps forward *out of the silhouette*,
-  which is the difference between a dog and a cat with a big nose. Coats — tabby bars, a
-  blaze, an eye patch, spots — are chosen once and carried onto both face and chest, each
-  one clipped to the shape it is painted on, which is `clip.js` run inverted: keep what
-  falls inside rather than cut away what falls behind.
+- **Animals** builds cats, dogs and fish from parts rather than tracing photographs.
+  Everything is authored in unit space at the origin, so every proportion is a plain
+  fraction of the animal's size and reading the numbers tells you the face. Cats and dogs
+  are head-and-shoulders portraits facing the viewer, separated where they actually
+  differ: a cat's head is one rounded mass, wider at the cheeks than it is tall, with high
+  triangular ears and whisker pads meeting under a small wedge nose; a dog's skull narrows
+  at the cheeks and a snout steps forward *out of the silhouette*, which is the difference
+  between a dog and a cat with a big nose. Coats — tabby bars, a blaze, an eye patch,
+  spots — are chosen once and carried onto both face and chest.
+
+  A fish gets a different treatment: face-on it is a sliver with two eyes and no
+  silhouette worth the name, so it is drawn in profile, whole, and swims across the page
+  in a shoal with bubbles and weed. Its scales are the point — rows of overlapping arcs,
+  each one big enough to hold a pencil.
+
+  Every marking is clipped to the shape it is painted on, which is `clip.js` run inverted:
+  keep what falls inside rather than cut away what falls behind.
 
 - **Fractal Forms** draws six families that are each built by applying one rule to their
   own output: the Sierpinski triangle, self-similar tilings, nested Koch snowflakes, the
