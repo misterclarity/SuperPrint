@@ -156,21 +156,34 @@ Notes on a few of the algorithms:
   solid black. Every element is a closed outline — a bare stroke encloses no area, so
   there would be nothing to colour, which `tests/closed-shapes.test.mjs` asserts.
 - **Fractal Forms** draws six families that are each built by applying one rule to their
-  own output: the Sierpinski triangle and carpet, nested Koch snowflakes, the dragon
-  curve, a Pythagoras tree, and an Apollonian gasket. The gasket is packed using
+  own output: the Sierpinski triangle, self-similar tilings, nested Koch snowflakes, the
+  dragon curve, a Pythagoras tree, and an Apollonian gasket. The gasket is packed using
   Descartes' circle theorem — given three mutually tangent circles, the curvature of a
   fourth tangent to all three is `k4 = k1 + k2 + k3 ± 2√(k1k2 + k2k3 + k3k1)`, and its
   complex companion places the centre; the outer circle carries a negative curvature
-  because it contains the rest rather than touching them from outside. Depth is never a
-  free parameter: detail multiplies two- or threefold per level, so one step too far
-  fills a figure in solid, and each family derives its ceiling from the size of its own
-  smallest feature against the widest pen on offer. `tests/fractal.test.mjs` checks that
-  the ceiling really does track the space available — a depth limit that is merely a
-  hard-coded number passes the obvious test and still fills in solid on a small tile.
-  Which families can show their construction step by step was settled by measurement
-  rather than taste: a quarter-page cell has room for about four levels of the fastest-
-  shrinking figure and two or three of the rest, so only the triangle and the gasket
-  visibly change at every step, and only those appear in the four-cell progressions.
+  because it contains the rest rather than touching them from outside.
+
+  Every family is parameterised, because a fractal that takes no parameters draws the same
+  picture on every seed. The tilings are the clearest case: the Sierpinski carpet is only
+  one member of a family that divides a square into n×n cells and keeps some, so the mask
+  is what varies — the named classics (carpet, Vicsek, saltire, lattice) alongside
+  four-fold symmetric masks generated per seed, with square, inset, round or diamond holes.
+  Dragons come in ones, twos and fours about a shared origin, which interlock exactly
+  because the curve tiles the plane with copies of itself. Pythagoras trees vary in where
+  the apex sits along the square's top edge *and* how far it stands off it — the second is
+  what changes a tree's silhouette from a tight spire to a sprawling canopy, and fixing it
+  at the textbook right-angle value makes every tree the same fan.
+
+  Depth is never a free parameter: detail multiplies two- or threefold per level, so one
+  step too far fills a figure in solid, and each family derives its ceiling from the size
+  of its own smallest feature against the widest pen on offer.
+  `tests/fractal.test.mjs` checks that the ceiling really does track the space available —
+  a depth limit that is merely a hard-coded number passes the obvious test and still fills
+  in solid on a small tile. Which families can show their construction step by step was
+  settled by measurement rather than taste: a quarter-page cell has room for about four
+  levels of the fastest-shrinking figure and two or three of the rest, so only the triangle
+  and the gasket visibly change at every step, and only those appear in the four-cell
+  progressions.
 
 ## Licence
 
