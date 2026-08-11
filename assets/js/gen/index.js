@@ -3,7 +3,7 @@ import kaleidoscope from './kaleidoscope.js';
 import wreath from './wreath.js';
 import bloomfield from './bloomfield.js';
 import frostfield from './frostfield.js';
-import geometric from './geometric.js';
+import pets from './pets.js';
 import stainedglass from './stainedglass.js';
 import celtic from './celtic.js';
 import folkweave from './folkweave.js';
@@ -20,7 +20,7 @@ export const STYLES = [
   frostfield,
   folkweave,
   fractal,
-  geometric,
+  pets,
   celtic,
   bands,
   contours,

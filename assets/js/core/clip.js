@@ -346,14 +346,17 @@ const lerpPt = (p, q, t) => ({ x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * 
  *
  * @param {{points: {x,y}[], closed: boolean}[]} subpaths
  * @param {Occluders|{x,y}[][]} occluders  polygons, or a prepared set
- * @param {{skip?: object, rank?: number}} [opts]  `skip` ignores one polygon,
- *   for when a shape is clipped against a set it is itself a member of; `rank`
- *   enables the union tie-break described on `Occluders.covers`
+ * @param {{skip?: object, rank?: number, inside?: boolean}} [opts]  `skip`
+ *   ignores one polygon, for when a shape is clipped against a set it is itself
+ *   a member of; `rank` enables the union tie-break described on
+ *   `Occluders.covers`; `inside` inverts the whole thing, keeping only the
+ *   parts that fall *within* the polygons — the operation wanted for confining
+ *   a marking to the shape it is painted on rather than hiding what is beneath
  * @returns {{points: {x,y}[], closed: boolean}[]} surviving runs, mostly open
  */
 export function clipOut(subpaths, occluders, opts = {}) {
   const occ = occluders instanceof Occluders ? occluders : new Occluders(occluders);
-  if (!occ.polys.length) return subpaths;
+  if (!occ.polys.length) return opts.inside ? [] : subpaths;
 
   const out = [];
 
@@ -361,9 +364,10 @@ export function clipOut(subpaths, occluders, opts = {}) {
     const pts = sub.points;
     if (pts.length < 2) continue;
 
-    // Nothing near it: keep the whole subpath untouched, curves and all.
+    // Nothing near it: keep the whole subpath untouched, curves and all —
+    // or, when keeping only what is inside, drop it entirely.
     if (!overlaps(boundsOf(pts), occ.bounds, TOUCH)) {
-      out.push(sub);
+      if (!opts.inside) out.push(sub);
       continue;
     }
 
@@ -381,7 +385,7 @@ export function clipOut(subpaths, occluders, opts = {}) {
       for (let k = 0; k <= ts.length; k++) {
         const to = k < ts.length ? lerpPt(p, q, ts[k]) : q;
         const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
-        const hidden = occ.covers(mid, opts);
+        const hidden = opts.inside ? !occ.covers(mid, opts) : occ.covers(mid, opts);
 
         if (hidden) {
           run = null;

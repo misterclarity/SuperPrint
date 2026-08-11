@@ -115,7 +115,9 @@ function silhouette(elements) {
  *   covered without covering anything itself — right for a stem, which should
  *   pass behind its leaves but not cut into them. `merge: true` unions the
  *   motif's own outlines into a single silhouette first, for shapes built from
- *   many overlapping pieces that are meant to read as one.
+ *   many overlapping pieces that are meant to read as one. `within: polygons`
+ *   confines the motif to those shapes, which is what a marking painted on an
+ *   animal needs — the opposite of occlusion, and the same machinery inverted.
  * @param {{tolerance?: number}} [opts]
  */
 export function layered(sk, items, opts = {}) {
@@ -144,12 +146,16 @@ export function layered(sk, items, opts = {}) {
       const subs = outline.map((s) => ({ ...s, attrs })).concat(marks);
       markup = emit(mask ? clipOut(subs, mask) : subs);
     } else {
+      const within = spec.within && spec.within.length ? new Occluders(spec.within) : null;
       markup = elements
         .map((el) => {
           if (el.opaque) return el.source;
-          // Nothing in front of it: keep the original curves exactly as drawn.
-          if (!mask || !boxesOverlap(el.bounds, mask.bounds)) return el.source;
-          return emit(clipOut(el.subs, mask));
+          let subs = el.subs;
+          // Confined to a shape first, then cut by whatever is in front of it.
+          if (within) subs = clipOut(subs, within, { inside: true });
+          else if (!mask || !boxesOverlap(el.bounds, mask.bounds)) return el.source;
+          if (mask && boxesOverlap(el.bounds, mask.bounds)) subs = clipOut(subs, mask);
+          return emit(subs);
         })
         .join('');
     }

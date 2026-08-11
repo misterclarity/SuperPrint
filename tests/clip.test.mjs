@@ -188,6 +188,32 @@ export default function run() {
       failures.push('clipping twice against the same occluder changed the result');
     }
 
+    /*
+     * Inverted: keep what falls inside. This is what confines a marking to the
+     * animal it is painted on, and the two halves must partition the subject —
+     * whatever one keeps, the other drops, and together they account for all of
+     * it and none of it twice.
+     */
+    const outside = clipOut(through, [box(0, 0, 100, 100)]);
+    const inside = clipOut(through, [box(0, 0, 100, 100)], { inside: true });
+    near('clip inside: line crossing a square', totalLength(inside), 100, 1e-6);
+    table['clip: inside + outside'] = {
+      got: (totalLength(inside) + totalLength(outside)).toFixed(3),
+      want: '200.000',
+    };
+    if (Math.abs(totalLength(inside) + totalLength(outside) - 200) > 1e-6) {
+      failures.push(
+        `keeping the inside and keeping the outside do not partition the subject: `
+        + `${totalLength(inside).toFixed(3)} + ${totalLength(outside).toFixed(3)} ≠ 200`,
+      );
+    }
+    const clearInside = clipOut(clear, [box(0, 0, 100, 100)], { inside: true });
+    if (clearInside.length) {
+      failures.push('a line entirely clear of the shape survived an inside-clip');
+    }
+    const swallowedInside = clipOut(swallowed, [box(0, 0, 100, 100)], { inside: true });
+    near('clip inside: line wholly within', totalLength(swallowedInside), 80, 1e-6);
+
     // Clipping can only ever remove ink, never invent it.
     const before = totalLength([{ points: box(0, 0, 100, 100), closed: true }]);
     if (totalLength(once) > before + 1e-9) failures.push('clipping produced more ink than it started with');
