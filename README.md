@@ -21,7 +21,11 @@ drop-in fit for GitHub Pages.
   weights — the bold setting is aimed at markers and low-vision colouring — and four
   border treatments.
 - **Private by design.** No server, no accounts, no analytics, no network calls after the
-  page loads. Saved designs live in `localStorage`. It works offline.
+  page loads. Saved designs live in `localStorage`.
+- **Installable, and works with no network.** A service worker caches the whole site on
+  first visit, so it opens and draws on a plane or in a waiting room. Browsers that offer
+  installation put it on the home screen or in the dock, where it runs in its own window
+  with no address bar.
 - **Built for phones too.** On a narrow screen the studio pins the preview to the top of
   the viewport and scrolls the controls beneath it, so every setting you change stays
   visible — no scrolling back and forth between the dials and the design. The seed and
@@ -46,7 +50,7 @@ npm run serve      # python3 -m http.server 8080
 npm test
 ```
 
-Seven suites, all plain Node with no test framework:
+Eight suites, all plain Node with no test framework:
 
 - `tests/generators.test.mjs` — renders every style across all complexity levels, paper
   sizes, line weights and borders, asserting well-formed SVG, no `NaN`/`undefined` in the
@@ -67,6 +71,11 @@ Seven suites, all plain Node with no test framework:
   outside must partition the subject exactly, with nothing lost or counted twice.
 - `tests/fractal.test.mjs` — recursion depth stops before the pen runs out, and the limit
   tracks the room available rather than being a hard-coded number.
+- `tests/pwa.test.mjs` — walks the repository and requires the service worker's precache
+  list to match it exactly: everything shipped is cached, everything cached exists. It
+  also catches the failures a browser never reports — an absolute `start_url`, a missing
+  maskable icon, a page that forgets the manifest — because the only symptom of those is
+  an install button that quietly never appears.
 
 ## Deploying to GitHub Pages
 
@@ -86,13 +95,43 @@ the files alone, and all paths are relative, so it serves correctly from a proje
 subpath (`user.github.io/SuperPrint/`) as well as from a custom domain.
 
 **Seeing a stale version after a deploy?** Pages serves files with `Cache-Control:
-max-age=600`, so a browser can hold the old CSS and JavaScript for up to ten minutes.
-Loading the site in a private window bypasses that entirely.
+max-age=600`, so a browser can hold the old CSS and JavaScript for up to ten minutes, and
+the service worker will have cached whatever it was given. Loading the site in a private
+window bypasses both.
+
+## Offline and installation
+
+The site is a progressive web app: `manifest.webmanifest` describes it to the browser and
+`sw.js` caches it.
+
+The strategy is stale-while-revalidate throughout — answer from the cache immediately,
+then refresh it in the background for next time. For a site that computes everything
+locally that is the right trade: pages open instantly and work with no network at all, and
+an update lands one visit later rather than being blocked on a round trip. Nobody is left
+sitting on an old version, though: when a new worker has finished installing, a small bar
+offers the new version and reloads on request.
+
+Two things about it are less obvious than they look:
+
+- **Every path is relative** — in the manifest (`start_url`, `scope`, `id`), in the
+  precache list, and in the page `<link>`s. An absolute `/` works perfectly at a custom
+  domain and breaks silently under `user.github.io/SuperPrint/`, where the only symptom is
+  that the browser stops offering to install.
+- **The precache list is written by hand**, because there is no build step to generate it.
+  A hand-written list of every file in a project is the definition of something that rots —
+  add a generator, forget the list, and the site passes every test and works perfectly in
+  the browser right up until someone opens it on a train and one module 404s. That is what
+  `tests/pwa.test.mjs` exists to prevent.
+
+Query strings are dropped from cache keys, since a design's whole recipe lives in the URL:
+`studio.html?style=mandala&seed=amber-thistle-408` is the same document as `studio.html`,
+and keying on the full URL would store a copy of the page for every design anyone opened.
 
 ## How it works
 
 ```
 index.html  studio.html  gallery.html  saved.html      pages
+sw.js  manifest.webmanifest                           offline and installation
 assets/js/core/   rng · sketch · shapes · render · export · store
                   path · clip · layer · quality   (geometry and composition)
 assets/js/gen/    one module per drawing style

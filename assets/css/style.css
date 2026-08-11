@@ -993,3 +993,60 @@ input[type='range'] {
     --sheet-h: 58dvh;
   }
 }
+
+/* ---------------------------------------------------------------- pwa --- */
+
+/*
+ * The bar offering a newly downloaded version. It has buttons in it, so it
+ * cannot be a toast: those are pointer-events: none so they never swallow a
+ * click meant for the page beneath.
+ */
+.update-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 130;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 20px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.9rem;
+  font-weight: 520;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translate(-50%, 20px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+.update-bar.show { opacity: 1; transform: translate(-50%, 0); }
+.update-bar .btn {
+  padding: 6px 14px;
+  background: var(--paper);
+  color: var(--ink);
+  border-color: transparent;
+}
+.update-bar .btn-ghost {
+  background: transparent;
+  color: var(--paper);
+  opacity: 0.75;
+}
+.update-bar .btn-ghost:hover { opacity: 1; }
+
+@media (max-width: 420px) {
+  .update-bar {
+    left: 12px;
+    right: 12px;
+    transform: translateY(20px);
+    justify-content: space-between;
+  }
+  .update-bar.show { transform: translateY(0); }
+}
+
+/* The install button only exists when a browser says the app can be installed. */
+.install-btn { white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .update-bar { transition: none; }
+}

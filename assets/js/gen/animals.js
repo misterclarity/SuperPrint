@@ -487,10 +487,27 @@ function fishBody(rng) {
     kind: 'fish',
     depth,
     tail,
+    tailLen: tail === 'veil' ? 0.98 : tail === 'fan' ? 0.66 : 0.62,
     outline,
     eye: { x: 0.62, y: -depth * 0.3, r: rng.range(0.1, 0.14) },
     coat: rng.pick(['scales', 'scales', 'stripes', 'spots', 'plain']),
     flip: rng.bool(0.5) ? -1 : 1,
+  };
+}
+
+/**
+ * How far a fish reaches in each direction, in its own units.
+ *
+ * It is not symmetric — the nose stops at 1.02 and the tail trails to nearly
+ * twice that — so sizing it by half its width and centring it on the box puts
+ * the tail off the side of the paper. Landscape sheets, where the fish is
+ * sized by width rather than height, showed it worst.
+ */
+function fishExtent(f) {
+  return {
+    left: 0.84 + f.tailLen,
+    right: 1.02,
+    half: Math.max(f.depth + 0.34, f.depth * 1.2),
   };
 }
 
@@ -653,10 +670,20 @@ function water(g, rng, box, r, cx, cy, shoal) {
    */
   const blades = rng.int(5, 9);
   for (let i = 0; i < blades; i++) {
-    const x = left + ((i + rng.range(0.15, 0.85)) / blades) * (right - left);
     const h = rng.range(0.55, 1.5);
     const sway = rng.range(-0.4, 0.4);
     const w = rng.range(0.06, 0.11);
+    /*
+     * The root is placed first and then pulled back inside the sheet, because a
+     * blade is not a point: it is `w` wide and leans `sway` as it rises. Picking
+     * the root anywhere in the box and drawing outward from it put the tips of
+     * the outermost blades a good half-unit off the edge of the paper.
+     */
+    const room = w + Math.abs(sway);
+    const x = Math.min(
+      Math.max(left + ((i + rng.range(0.15, 0.85)) / blades) * (right - left), left + room),
+      right - room,
+    );
     g.blob([
       { x: x - w, y: bottom },
       { x: x + sway - w * 0.7, y: bottom - h * 0.55 },
@@ -938,12 +965,20 @@ function shoal(sk, box, rng) {
 
   for (let i = 0; i < count; i++) {
     const f = fishBody(rng);
-    // The vertical extent is the body plus the dorsal and ventral fins, not
-    // the body alone, or the fins run out of the band.
-    const r = Math.min(box.w / 3.25, bandH / (f.depth * 2 + 1.2));
+    const flip = i % 2 ? -1 : 1;
+    const e = fishExtent(f);
+    // Flipping swaps which way the tail trails, and so which side needs room.
+    const left = flip > 0 ? e.left : e.right;
+    const right = flip > 0 ? e.right : e.left;
+
+    const r = Math.min(box.w / (left + right + 0.24), bandH / (e.half * 2 + 0.5));
     const cy = box.y + bandH * (i + 0.5);
-    const cx = box.x + box.w / 2 + rng.range(-0.2, 0.2) * box.w * 0.2;
-    fish.push({ f, r, cx, cy, flip: i % 2 ? -1 : 1 });
+    // Centre the fish's own extent in the band, then jitter within the slack
+    // that is actually left over rather than a fixed fraction of the box.
+    const mid = box.x + box.w / 2 - ((right - left) / 2) * r;
+    const slack = Math.max(0, (box.w - (left + right) * r) / 2);
+    const cx = mid + rng.range(-1, 1) * slack * 0.6;
+    fish.push({ f, r, cx, cy, flip });
   }
 
   // In unit space of the first fish, for the bubble keep-out.
