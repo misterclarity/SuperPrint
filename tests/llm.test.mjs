@@ -14,7 +14,8 @@
  */
 
 import {
-  extractJson, coerceDesign, readReply, cleanSeed, preflight, baseOf, systemPrompt, catalogue,
+  extractJson, coerceDesign, readReply, cleanSeed, preflight, baseOf, modelLabel,
+  systemPrompt, catalogue,
 } from '../assets/js/core/llm.js';
 import { STYLES } from '../assets/js/gen/index.js';
 import { PAPERS, WEIGHTS, FRAMES } from '../assets/js/core/render.js';
@@ -181,6 +182,19 @@ export default function run() {
     eq('trailing /v1', baseOf('http://box:1234/v1'), 'http://box:1234');
     eq('trailing /v1/', baseOf('http://box:1234/v1/'), 'http://box:1234');
     eq('surrounding space', baseOf('  http://box:11434  '), 'http://box:11434');
+    // The exact form a llama.cpp user has in front of them.
+    eq('a tailnet address with /v1', baseOf('http://100.119.213.123:8080/v1'), 'http://100.119.213.123:8080');
+
+    /*
+     * llama.cpp reports the file it loaded as the model id, so the id is a full
+     * path. Truncated in a dropdown that leaves the directory and hides the
+     * name, which is the half that identifies it.
+     */
+    eq('a gguf path', modelLabel('/home/me/models/Qwen2.5-7B-Instruct-Q4_K_M.gguf'), 'Qwen2.5-7B-Instruct-Q4_K_M');
+    eq('a windows gguf path', modelLabel('C:\\models\\Llama-3.1-8B.gguf'), 'Llama-3.1-8B');
+    eq('an ollama tag is left alone', modelLabel('llama3.1:8b'), 'llama3.1:8b');
+    eq('a plain name is left alone', modelLabel('gpt-oss-20b'), 'gpt-oss-20b');
+    eq('nothing', modelLabel(''), '');
   }
 
   /*

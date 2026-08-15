@@ -222,18 +222,31 @@ Ollama's own, and works out which is which by asking.
 
 Two things have to be true, and both have unhelpful symptoms if they are not.
 
-**1. The server has to allow this page's origin.** Browsers refuse cross-origin requests
-that the server has not opted into, and report the refusal identically to "the machine is
-switched off". For Ollama:
+**1. The server has to be listening beyond localhost, and allow this page's origin.**
+Browsers refuse cross-origin requests the server has not opted into, and report the refusal
+identically to "the machine is switched off".
 
 ```bash
-# listen beyond localhost, and accept the page's origin
+# llama.cpp — the OpenAI-compatible API is at /v1, so the address to paste
+# is http://<host>:8080/v1 (a trailing /v1 is expected and handled)
+llama-server -m model.gguf --host 0.0.0.0 --port 8080
+
+# Ollama
 OLLAMA_HOST=0.0.0.0 OLLAMA_ORIGINS='https://misterclarity.github.io' ollama serve
 ```
 
-LM Studio has a CORS toggle beside its server switch; `llama-server` has `--host` and its
-own CORS flag. Use your real origin rather than `*` if the machine is reachable by anyone
-else on the tailnet.
+Recent `llama-server` builds send a permissive CORS header themselves, so there is usually
+nothing to configure; if Connect reports that nothing answered while the server is plainly
+up, that is the first thing to check for your build. LM Studio has a CORS toggle beside its
+server switch. Use your real origin rather than `*` where the machine is reachable by
+anyone else on the tailnet.
+
+Two llama.cpp details worth knowing. Its model id is the file it loaded, so the dropdown
+would otherwise read `/home/you/models/Qwen2.5-7B-Instru…` — the half that identifies it
+cut off — and SuperPrint shows the filename instead while sending the real id; `-a` gives it
+a shorter name at the source if you would rather. And if you run with `--api-key`, this will
+not authenticate: no key is sent, by design, because there was nothing to send one to until
+now.
 
 **2. If SuperPrint is served over HTTPS, the model must be too.** A page on
 `https://…github.io` cannot make requests to a plain `http://` address — the browser blocks
@@ -244,9 +257,14 @@ Tailscale solves it: with MagicDNS and HTTPS certificates enabled for your tailn
 put a real certificate in front of a local port.
 
 ```bash
-tailscale serve --bg 11434        # then use https://<machine>.<tailnet>.ts.net
+tailscale serve --bg 8080         # llama.cpp's port; 11434 for Ollama
 tailscale serve status            # confirms what is being served where
+# then use https://<machine>.<tailnet>.ts.net/v1
 ```
+
+A bare tailnet IP such as `http://100.119.213.123:8080/v1` works fine from `localhost` and
+not at all from GitHub Pages, for the same reason: it is plain HTTP. Serving it through
+`tailscale serve` is what gives it a name and a certificate.
 
 (The exact `serve` syntax has changed across Tailscale versions; `tailscale serve --help`
 is authoritative for yours.) The alternative, if you would rather not, is to run SuperPrint

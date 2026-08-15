@@ -345,6 +345,21 @@ export function baseOf(url) {
 }
 
 /**
+ * A model id short enough to read, without changing the id itself.
+ *
+ * llama.cpp names its model after the file it loaded, so the id that comes back
+ * is a full path to a .gguf. In a dropdown that truncates, what survives is
+ * "/home/me/models/Qwen2.5-7B-Inst…" — every character of which is either the
+ * same for all your models or cut off. The filename is the part that identifies
+ * it, so that is what gets shown; the real id still goes to the server.
+ */
+export function modelLabel(id) {
+  const s = String(id ?? '');
+  const base = s.split(/[\\/]/).pop() || s;
+  return base.replace(/\.gguf$/i, '') || s;
+}
+
+/**
  * Problems worth naming before a request is made.
  *
  * A browser will not tell you why a cross-origin request to a plain-HTTP

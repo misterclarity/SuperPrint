@@ -82,7 +82,7 @@ export function createAskBox({ getParams, onApply }) {
         + `<a href="${READ_MORE}" target="_blank" rel="noopener noreferrer">How to set it up</a>.`,
       );
     } else if (!busy) {
-      setNote(`Asking <b>${escape(s.model)}</b> on your own machine.`);
+      setNote(`Asking <b>${escape(llm.modelLabel(s.model))}</b> on your own machine.`);
     }
     return s;
   }
@@ -96,7 +96,7 @@ export function createAskBox({ getParams, onApply }) {
     busy = new AbortController();
     go.innerHTML = ICONS.close;
     go.setAttribute('aria-label', 'Cancel');
-    setNote(`Asking ${escape(settings.model)}…`);
+    setNote(`Asking ${escape(llm.modelLabel(settings.model))}…`);
 
     try {
       const reply = await llm.ask(settings, text, { signal: busy.signal });
@@ -105,7 +105,7 @@ export function createAskBox({ getParams, onApply }) {
 
       if (!read) {
         setNote(
-          `<b>${escape(settings.model)}</b> answered, but not with a design. `
+          `<b>${escape(llm.modelLabel(settings.model))}</b> answered, but not with a design. `
           + 'Smaller models often need a plainer request — try naming a subject or a mood.',
           'warn',
         );
@@ -191,11 +191,18 @@ function openSettings(onSaved) {
 
   const existing = llm.loadSettings();
   url.value = existing?.url || '';
-  model.innerHTML = existing ? `<option>${escape(existing.model)}</option>` : '<option>Connect to list models</option>';
+  const option = (id) => {
+    const o = document.createElement('option');
+    o.value = id;                       // what the server is actually asked for
+    o.textContent = llm.modelLabel(id); // what fits in the box
+    o.title = id;
+    return o;
+  };
+  model.replaceChildren(existing ? option(existing.model) : new Option('Connect to list models'));
   model.disabled = !existing;
   save.disabled = !existing;
   flavour = existing?.flavour || 'openai';
-  say(existing ? `Saved: ${existing.model}` : '');
+  say(existing ? `Saved: ${llm.modelLabel(existing.model)}` : '');
 
   dialog.querySelector('#llm-detect').onclick = async () => {
     const problem = llm.preflight(url.value);
@@ -204,7 +211,7 @@ function openSettings(onSaved) {
     try {
       const found = await llm.detect(url.value);
       flavour = found.flavour;
-      model.innerHTML = found.models.map((m) => `<option>${escape(m)}</option>`).join('');
+      model.replaceChildren(...found.models.map(option));
       if (existing && found.models.includes(existing.model)) model.value = existing.model;
       model.disabled = false;
       save.disabled = false;
@@ -226,7 +233,7 @@ function openSettings(onSaved) {
   dialog.querySelector('#llm-forget').onclick = () => {
     llm.clearSettings();
     url.value = '';
-    model.innerHTML = '<option>Connect to list models</option>';
+    model.replaceChildren(new Option('Connect to list models'));
     model.disabled = true;
     save.disabled = true;
     onSaved();
