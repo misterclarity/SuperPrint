@@ -24,7 +24,11 @@ drop-in fit for GitHub Pages.
   weights — the bold setting is aimed at markers and low-vision colouring — and four
   border treatments.
 - **Private by design.** No server, no accounts, no analytics, no network calls after the
-  page loads. Saved designs live in `localStorage`.
+  page loads. Saved designs live in `localStorage`. The one exception is opt-in, off until
+  you configure it, and goes to a machine you own — see below.
+- **Describe a page in words**, to a language model you are running yourself. Off by
+  default; nothing is sent anywhere until you enter your own model's address. See
+  [Describing a page to a local model](#describing-a-page-to-a-local-model).
 - **Installable, and works with no network.** A service worker caches the whole site on
   first visit, so it opens and draws on a plane or in a waiting room. Browsers that offer
   installation put it on the home screen or in the dock, where it runs in its own window
@@ -53,7 +57,7 @@ npm run serve      # python3 -m http.server 8080
 npm test
 ```
 
-Nine suites, all plain Node with no test framework:
+Ten suites, all plain Node with no test framework:
 
 - `tests/generators.test.mjs` — renders every style across all complexity levels, paper
   sizes, line weights and borders, asserting well-formed SVG, no `NaN`/`undefined` in the
@@ -78,6 +82,12 @@ Nine suites, all plain Node with no test framework:
   construction: a fill covers its region exactly, a tap on a line is not a region, a
   broken outline leaks (and should), and growing the mask to hide the anti-aliasing does
   not reach through a stroke into the shape next door.
+- `tests/llm.test.mjs` — reading a language model's answer. The model itself cannot be
+  tested — it is on someone else's machine and says something different every time — but
+  everything downstream of it can, and that is where the value is: JSON buried in
+  apologies and code fences, `"Stained Glass"` where an id was asked for, `"very
+  intricate"` where a number was, and replies with no JSON in them at all. Every case ends
+  with a drawable page rather than an error.
 - `tests/pwa.test.mjs` — walks the repository and requires the service worker's precache
   list to match it exactly: everything shipped is cached, everything cached exists. It
   also catches the failures a browser never reports — an absolute `start_url`, a missing
@@ -169,6 +179,82 @@ Work in progress is saved to `localStorage` (the paint layer only — the artwor
 a pure function of the URL) and restored when you come back, because on a phone leaving a
 page is rarely a decision.
 
+## Describing a page to a local model
+
+The studio has a **Describe a page** box that asks a language model — one you are running
+yourself — to choose the settings for you. "A calm page of autumn leaves, for markers"
+becomes Botanical Wreath, detail 2, bold pen, and a seed called `autumn-ember`.
+
+**It is off until you configure it.** With no model set the field is disabled and no
+request is made to anything, which is checked in the browser as part of testing this. There
+is no hosted service behind it and no API key: the address you enter is the only place
+anything is sent, it is stored in your browser's own storage, and **Forget** removes it.
+
+**What the model actually does.** It does not draw. It reads your description and sets the
+same dials the panel already has — style, detail, paper, pen, border — and names the seed.
+The linework is still the generator's, identical to what you would get by setting those
+dials by hand. That is worth knowing because it tells you what to ask for: requests about
+*mood, subject and who the page is for* are answered well, because those really are
+questions about the dials. "A mandala with exactly seven petals" is not, and no amount of
+prompting will make it so.
+
+Two details make it behave rather than misbehave:
+
+- **What the model did not understand keeps its old value.** A reply naming only a style
+  changes only the style; the paper size you chose by hand survives it. The box then says
+  what was taken — "Set: style, detail" — because a model that quietly ignored half your
+  request should not look like it obeyed all of it.
+- **The seed is a family, not a roll.** The model is good at naming `autumn-ember` and has
+  no idea which particular roll of that seed lands lopsided, since it never sees the
+  drawing. So a name without a number becomes a family, and the composition filter picks
+  the member that uses the sheet best. A model that returned a complete seed is obeyed
+  exactly — that is someone reproducing a specific page.
+
+Anything else a model says is treated as a suggestion from something unreliable: parsed out
+of whatever prose it arrived wrapped in, mapped onto the vocabulary the site has, then
+clamped. A model that returns nonsense produces a valid page, not an error.
+
+### Setting it up
+
+Click **Connect** in the box. Enter the address, press Connect, pick a model, Save. It
+speaks both the OpenAI-compatible API (Ollama, LM Studio, llama.cpp, vLLM, Jan) and
+Ollama's own, and works out which is which by asking.
+
+Two things have to be true, and both have unhelpful symptoms if they are not.
+
+**1. The server has to allow this page's origin.** Browsers refuse cross-origin requests
+that the server has not opted into, and report the refusal identically to "the machine is
+switched off". For Ollama:
+
+```bash
+# listen beyond localhost, and accept the page's origin
+OLLAMA_HOST=0.0.0.0 OLLAMA_ORIGINS='https://misterclarity.github.io' ollama serve
+```
+
+LM Studio has a CORS toggle beside its server switch; `llama-server` has `--host` and its
+own CORS flag. Use your real origin rather than `*` if the machine is reachable by anyone
+else on the tailnet.
+
+**2. If SuperPrint is served over HTTPS, the model must be too.** A page on
+`https://…github.io` cannot make requests to a plain `http://` address — the browser blocks
+it before it leaves, with no useful error. SuperPrint checks for this itself and says so
+rather than letting you wonder.
+
+Tailscale solves it: with MagicDNS and HTTPS certificates enabled for your tailnet, it will
+put a real certificate in front of a local port.
+
+```bash
+tailscale serve --bg 11434        # then use https://<machine>.<tailnet>.ts.net
+tailscale serve status            # confirms what is being served where
+```
+
+(The exact `serve` syntax has changed across Tailscale versions; `tailscale serve --help`
+is authoritative for yours.) The alternative, if you would rather not, is to run SuperPrint
+from `http://localhost` — browsers exempt loopback from the mixed-content rule, so a plain
+`http://` model works there, and SuperPrint knows that too.
+
+Nothing about this is required. The site works exactly as it did without it.
+
 ## Offline and installation
 
 The site is a progressive web app: `manifest.webmanifest` describes it to the browser and
@@ -206,6 +292,7 @@ sw.js  manifest.webmanifest                           offline and installation
 assets/js/core/   rng · sketch · shapes · render · export · store
                   path · clip · layer · quality   (geometry and composition)
                   paint                           (the flood fill)
+                  llm                             (optional, opt-in, local only)
 assets/js/gen/    one module per drawing style
 assets/js/pages/  per-page controllers
 ```

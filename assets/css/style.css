@@ -1321,3 +1321,25 @@ body.colouring .toast {
   .swatch { transition: none; }
   .colour-hint { transition: none; }
 }
+
+/* ====================================================================== */
+/* Describing a page to a local model                                     */
+/* ====================================================================== */
+
+.ask-field { position: relative; }
+.ask-field .field-label { align-items: center; }
+.ask-field .btn-ghost { margin: -4px 0; }
+.ask-note { margin: 8px 0 0; }
+.ask-note.warn { color: var(--accent); white-space: pre-line; }
+.ask-note.ok { color: var(--teal); }
+/* What the model actually took, kept quieter than its own explanation. */
+.ask-took { display: block; margin-top: 3px; opacity: 0.75; }
+
+.llm-dialog { max-width: 520px; }
+.llm-label { display: block; margin: 14px 0 6px; font-size: 0.82rem; font-weight: 650; }
+.llm-hint { margin: 8px 0 0; }
+.llm-row { display: flex; gap: 8px; margin-top: 14px; }
+.llm-row .input { flex: 1; min-width: 0; font-family: var(--sans); }
+.llm-status { margin: 10px 0 0; min-height: 1.4em; white-space: pre-line; }
+.llm-status.warn { color: var(--accent); }
+.llm-status.ok { color: var(--teal); }

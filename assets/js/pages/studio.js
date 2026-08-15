@@ -6,6 +6,7 @@ import { randomSeed, makeRng } from '../core/rng.js';
 import { pickBestSeed } from '../core/quality.js';
 import { downloadPNG, downloadSVG, printDesign, copyLink } from '../core/export.js';
 import * as store from '../core/store.js';
+import { createAskBox } from '../components/askbox.js';
 import { ICONS, toast } from '../ui.js';
 
 const els = {
@@ -191,6 +192,7 @@ function buildSegment(container, options, key, labelKey = 'label') {
     const b = document.createElement('button');
     b.type = 'button';
     b.textContent = opt[labelKey];
+    b.dataset.value = opt.id;
     if (opt.sub) b.title = opt.sub;
     b.setAttribute('aria-pressed', String(opt.id === params[key]));
     b.addEventListener('click', () => {
@@ -198,6 +200,29 @@ function buildSegment(container, options, key, labelKey = 'label') {
       container.querySelectorAll('button').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
     });
     container.appendChild(b);
+  }
+}
+
+/**
+ * Repaint every control from `params`.
+ *
+ * Anything that changes several settings at once — Surprise me, and now a
+ * described page — has to leave the panel agreeing with the sheet. Doing it
+ * from one place means a new control cannot be wired into the panel and
+ * forgotten by half the things that set it.
+ */
+function syncControls() {
+  els.seedInput.value = params.seed;
+  els.complexity.value = String(params.complexity);
+  els.complexityLabel.textContent = COMPLEXITY_LABELS[params.complexity];
+  els.caption.checked = params.caption;
+  els.styleList.querySelectorAll('.style-opt').forEach((o, i) => {
+    o.setAttribute('aria-pressed', String(STYLES[i].id === params.style));
+  });
+  for (const [container, key] of [[els.paper, 'paper'], [els.weight, 'weight'], [els.frame, 'frame']]) {
+    container.querySelectorAll('button').forEach((b) => {
+      b.setAttribute('aria-pressed', String(b.dataset.value === params[key]));
+    });
   }
 }
 
@@ -278,10 +303,7 @@ function wire() {
     const style = rng.pick(STYLES).id;
     const complexity = rng.int(2, 5);
     set({ style, complexity, seed: pickBestSeed({ ...params, style, complexity }) });
-    els.seedInput.value = params.seed;
-    els.complexity.value = String(params.complexity);
-    els.complexityLabel.textContent = COMPLEXITY_LABELS[params.complexity];
-    els.styleList.querySelectorAll('.style-opt').forEach((o, i) => o.setAttribute('aria-pressed', String(STYLES[i].id === style)));
+    syncControls();
   });
 
   els.print.innerHTML = `${ICONS.print}<span>Print</span>`;
@@ -353,6 +375,13 @@ if (els.sheet) {
   buildSegment(els.weight, Object.values(WEIGHTS), 'weight');
   buildSegment(els.frame, Object.values(FRAMES), 'frame');
   wire();
+
+  // Above the style grid: describing a page is a way of setting all of these
+  // at once, so it belongs before them rather than buried under them.
+  document.getElementById('controls').prepend(createAskBox({
+    getParams: () => params,
+    onApply: (next) => { set(next); syncControls(); },
+  }));
   placeQuickControls();
   syncZoomAffordance();
   render();
