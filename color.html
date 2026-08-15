@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Colour it in — SuperPrint</title>
+<meta name="description" content="Colour a SuperPrint design in with your finger: tap an area to fill it, brush in shading, then print or save the result.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f6f2ea" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15130f" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="SuperPrint">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/print.css" media="print">
+<script>
+  try {
+    var t = localStorage.getItem('superprint.theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+</head>
+<body class="colouring">
+
+<div class="colour-app">
+
+  <header class="colour-bar">
+    <a class="btn btn-ghost btn-sm" id="colour-back" href="studio.html">Back</a>
+    <p class="colour-title" id="colour-title"></p>
+    <div class="colour-bar-actions">
+      <button class="btn btn-outline btn-sm" id="colour-print" type="button"></button>
+      <button class="btn btn-primary btn-sm" id="colour-save" type="button"></button>
+    </div>
+  </header>
+
+  <!--
+    The sheet: a paint canvas with the line art laid over it, so the browser
+    recomposites on its own and a stroke never has to redraw the artwork.
+
+    The artwork on top is the SVG itself rather than a picture of it, so it
+    stays sharp however far in someone zooms. The rasterised copy the flood
+    fill needs is kept off-screen, at a resolution chosen for filling rather
+    than for looking at.
+  -->
+  <div class="colour-stage" id="colour-stage">
+    <div class="colour-paper" id="colour-paper">
+      <canvas id="colour-paint"></canvas>
+      <img id="colour-lines" alt="" draggable="false">
+    </div>
+    <p class="colour-hint" id="colour-hint">Tap an area to fill it · pinch to zoom</p>
+    <button class="btn btn-outline btn-sm colour-reset" id="colour-reset" type="button" hidden>Fit to screen</button>
+  </div>
+
+  <div class="colour-tools">
+    <div class="swatches" id="swatches" role="radiogroup" aria-label="Colour"></div>
+
+    <div class="tool-row">
+      <div class="seg tool-seg" id="tool-seg" role="group" aria-label="Tool"></div>
+
+      <label class="brush-size" id="brush-size" hidden>
+        <span class="sr-only">Brush size</span>
+        <input id="brush-range" type="range" min="1" max="5" step="1" value="3" aria-label="Brush size">
+      </label>
+
+      <span class="spacer"></span>
+
+      <button class="btn btn-outline btn-icon" id="colour-undo" type="button" aria-label="Undo" title="Undo" disabled></button>
+      <button class="btn btn-outline btn-sm" id="colour-clear" type="button">Clear</button>
+    </div>
+  </div>
+
+</div>
+
+<script type="module" src="assets/js/ui.js"></script>
+<script type="module" src="assets/js/pages/color.js"></script>
+<script type="module" src="assets/js/pwa.js"></script>
+</body>
+</html>

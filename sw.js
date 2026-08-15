@@ -29,6 +29,7 @@ const CACHE = `superprint-${VERSION}`;
 const ASSETS = [
   './',
   '404.html',
+  'color.html',
   'gallery.html',
   'index.html',
   'manifest.webmanifest',
@@ -49,6 +50,7 @@ const ASSETS = [
   'assets/js/core/clip.js',
   'assets/js/core/export.js',
   'assets/js/core/layer.js',
+  'assets/js/core/paint.js',
   'assets/js/core/path.js',
   'assets/js/core/quality.js',
   'assets/js/core/render.js',
@@ -70,6 +72,7 @@ const ASSETS = [
   'assets/js/gen/mandala.js',
   'assets/js/gen/stainedglass.js',
   'assets/js/gen/wreath.js',
+  'assets/js/pages/color.js',
   'assets/js/pages/gallery.js',
   'assets/js/pages/home.js',
   'assets/js/pages/saved.js',

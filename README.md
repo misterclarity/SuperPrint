@@ -17,6 +17,9 @@ drop-in fit for GitHub Pages.
   (`amber-thistle-408`) and every design's URL carries its full recipe.
 - **Print-ready output.** Print straight from the browser, export a 300 DPI PNG, or take
   the vector SVG for poster-size printing, Illustrator/Inkscape or a cutting machine.
+- **Colour it in with a finger.** Tap an area to fill it, brush in shading, pinch to zoom
+  into the fine detail, and print or save the result at 300 DPI. Work in progress survives
+  leaving the page. See [Colouring](#colouring).
 - **Five paper sizes** (US Letter and A4 in both orientations, plus square), three line
   weights — the bold setting is aimed at markers and low-vision colouring — and four
   border treatments.
@@ -50,7 +53,7 @@ npm run serve      # python3 -m http.server 8080
 npm test
 ```
 
-Eight suites, all plain Node with no test framework:
+Nine suites, all plain Node with no test framework:
 
 - `tests/generators.test.mjs` — renders every style across all complexity levels, paper
   sizes, line weights and borders, asserting well-formed SVG, no `NaN`/`undefined` in the
@@ -71,6 +74,10 @@ Eight suites, all plain Node with no test framework:
   outside must partition the subject exactly, with nothing lost or counted twice.
 - `tests/fractal.test.mjs` — recursion depth stops before the pen runs out, and the limit
   tracks the room available rather than being a hard-coded number.
+- `tests/paint.test.mjs` — the flood fill, on bitmaps whose right answer is known by
+  construction: a fill covers its region exactly, a tap on a line is not a region, a
+  broken outline leaks (and should), and growing the mask to hide the anti-aliasing does
+  not reach through a stroke into the shape next door.
 - `tests/pwa.test.mjs` — walks the repository and requires the service worker's precache
   list to match it exactly: everything shipped is cached, everything cached exists. It
   also catches the failures a browser never reports — an absolute `start_url`, a missing
@@ -98,6 +105,49 @@ subpath (`user.github.io/SuperPrint/`) as well as from a custom domain.
 max-age=600`, so a browser can hold the old CSS and JavaScript for up to ten minutes, and
 the service worker will have cached whatever it was given. Loading the site in a private
 window bypasses both.
+
+## Colouring
+
+`color.html` opens a design in a colouring mode: tap an area to fill it, brush in shading,
+pinch to zoom into the detail, then print or save the result.
+
+**Why it fills pixels, not shapes.** The obvious way to make an SVG colourable is to let
+people tap the shapes and set their `fill`. It does not work here. A region on one of these
+pages is almost never one closed path — it is the space enclosed by a ring, two petals and
+a stem, each drawn independently and none of them aware of the others. Tapping a shape
+would colour a whole chain of petals, or nothing at all. So the artwork is rasterised once,
+and a flood fill spreads across a paint layer beneath it, stopped wherever there is ink.
+What gets coloured is the region a person can see, which is the only definition that
+matters. Counted across the twelve styles, that gives between 27 and 976 distinct fillable
+regions on a single sheet.
+
+Two consequences worth knowing:
+
+- **The threshold matters more than it looks.** Rasterised strokes are anti-aliased, so a
+  line is a ramp rather than an edge. Treat only solid pixels as walls and fills seep out
+  through the corners where two lines cross; treat the faintest tint as a wall and every
+  filled region gets a white halo. The wall sits at just over a third of full opacity, and
+  the finished mask is then grown by one pixel so the colour slides *under* the stroke,
+  where the artwork is drawn on top of it and hides the join.
+- **A gap in the outline leaks, and that is correct.** Line art with a break in it has no
+  enclosed region, so a fill that helpfully stopped somewhere would be inventing a boundary
+  the reader cannot see. Undo is the answer to a leak, not a guess.
+
+**Gestures.** A finger is not a mouse, and a single finger must never have an ambiguous
+job. With the fill tool one finger taps to fill and drags to pan; with the brush or eraser
+one finger draws; two fingers always pinch and pan, and a second finger arriving mid-stroke
+rewinds the stroke it interrupted rather than smearing it.
+
+**Resolution.** The sheet is coloured at a raster sized so that even the finest pen draws a
+wall at least two pixels thick — the paper's own units are far too coarse for that, and
+print resolution would be eight million pixels of work per tap. The artwork you look at is
+the SVG itself rather than that raster, so it stays sharp however far in you zoom; the
+raster is kept off-screen purely as the fill's walls. Exports composite fresh at 300 DPI,
+redrawing the line art from the SVG rather than scaling the screen copy up.
+
+Work in progress is saved to `localStorage` (the paint layer only — the artwork under it is
+a pure function of the URL) and restored when you come back, because on a phone leaving a
+page is rarely a decision.
 
 ## Offline and installation
 
@@ -131,9 +181,11 @@ and keying on the full URL would store a copy of the page for every design anyon
 
 ```
 index.html  studio.html  gallery.html  saved.html      pages
+color.html                                            colouring mode
 sw.js  manifest.webmanifest                           offline and installation
 assets/js/core/   rng · sketch · shapes · render · export · store
                   path · clip · layer · quality   (geometry and composition)
+                  paint                           (the flood fill)
 assets/js/gen/    one module per drawing style
 assets/js/pages/  per-page controllers
 ```

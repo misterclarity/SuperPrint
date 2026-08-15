@@ -6,10 +6,16 @@ import { printDesign } from '../core/export.js';
 import * as store from '../core/store.js';
 import { ICONS, toast } from '../ui.js';
 
+function query(params) {
+  return new URLSearchParams(Object.entries(normalize(params)).map(([k, v]) => [k, String(v)])).toString();
+}
+
 export function studioURL(params) {
-  const p = normalize(params);
-  const q = new URLSearchParams(Object.entries(p).map(([k, v]) => [k, String(v)]));
-  return `studio.html?${q.toString()}`;
+  return `studio.html?${query(params)}`;
+}
+
+export function colourURL(params) {
+  return `color.html?${query(params)}`;
 }
 
 function aspectClass(paper) {
@@ -43,6 +49,7 @@ export function createTile(params, opts = {}) {
       <div class="small muted">${COMPLEXITY_LABELS[p.complexity]} · ${PAPERS[p.paper].label}</div>
       <div class="tile-actions">
         <a class="btn btn-outline btn-sm" href="${studioURL(p)}">Open</a>
+        <a class="btn btn-outline btn-sm" href="${colourURL(p)}" title="Colour this design in" aria-label="Colour in ${style.name} ${p.seed}">${ICONS.palette}</a>
         <button class="btn btn-outline btn-sm" data-act="print" title="Print this design" aria-label="Print ${style.name} ${p.seed}">${ICONS.print}</button>
         <button class="btn btn-outline btn-sm" data-act="save" title="Save this design"></button>
       </div>

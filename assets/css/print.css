@@ -22,7 +22,9 @@
     padding: 0;
   }
 
-  body.is-printing #print-root svg {
+  /* An <img> here is a coloured sheet coming from the colouring page. */
+  body.is-printing #print-root svg,
+  body.is-printing #print-root img {
     display: block;
     width: 100%;
     height: auto;

@@ -8,6 +8,7 @@ import lineWeight from './line-weight.test.mjs';
 import quality from './quality.test.mjs';
 import clip from './clip.test.mjs';
 import fractal from './fractal.test.mjs';
+import paint from './paint.test.mjs';
 import pwa from './pwa.test.mjs';
 
 const suites = [
@@ -18,6 +19,7 @@ const suites = [
   ['composition scoring', quality],
   ['clipping and layering', clip],
   ['fractal depth limits', fractal],
+  ['colouring engine', paint],
   ['offline & installable', pwa],
 ];
 

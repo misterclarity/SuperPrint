@@ -25,6 +25,7 @@ const els = {
   zoomClose: document.getElementById('zoom-close'),
   surprise: document.getElementById('act-surprise'),
   print: document.getElementById('act-print'),
+  colour: document.getElementById('act-colour'),
   png: document.getElementById('act-png'),
   svg: document.getElementById('act-svg'),
   save: document.getElementById('act-save'),
@@ -49,6 +50,8 @@ let frame = 0;
 function syncURL() {
   const q = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]));
   history.replaceState(null, '', `${window.location.pathname}?${q.toString()}`);
+  // The colouring page draws from the same recipe, so it only needs the query.
+  els.colour.href = `color.html?${q.toString()}`;
 }
 
 function countLines(svg) {
@@ -283,6 +286,9 @@ function wire() {
 
   els.print.innerHTML = `${ICONS.print}<span>Print</span>`;
   els.print.addEventListener('click', () => printDesign(params));
+
+  els.colour.innerHTML = `${ICONS.palette}<span>Colour it in</span>`;
+  els.colour.title = 'Colour this page in on screen';
 
   els.png.innerHTML = `${ICONS.download}<span>PNG</span>`;
   els.png.addEventListener('click', async () => {

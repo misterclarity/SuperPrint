@@ -18,7 +18,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const PAGES = ['index.html', 'studio.html', 'gallery.html', 'saved.html', '404.html'];
+const PAGES = ['index.html', 'studio.html', 'color.html', 'gallery.html', 'saved.html', '404.html'];
 
 // Not part of what a browser loads: tooling, docs and the worker itself, which
 // cannot be one of its own cached assets.
