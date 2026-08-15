@@ -17,9 +17,9 @@ drop-in fit for GitHub Pages.
   (`amber-thistle-408`) and every design's URL carries its full recipe.
 - **Print-ready output.** Print straight from the browser, export a 300 DPI PNG, or take
   the vector SVG for poster-size printing, Illustrator/Inkscape or a cutting machine.
-- **Colour it in with a finger.** Tap an area to fill it, brush in shading, pinch to zoom
-  into the fine detail, and print or save the result at 300 DPI. Work in progress survives
-  leaving the page. See [Colouring](#colouring).
+- **Colour it in, by finger or by mouse.** Tap or click an area to fill it, brush in
+  shading, zoom into the fine detail, and print or save the result at 300 DPI. Work in
+  progress survives leaving the page. See [Colouring](#colouring).
 - **Five paper sizes** (US Letter and A4 in both orientations, plus square), three line
   weights — the bold setting is aimed at markers and low-vision colouring — and four
   border treatments.
@@ -137,6 +137,26 @@ Two consequences worth knowing:
 job. With the fill tool one finger taps to fill and drags to pan; with the brush or eraser
 one finger draws; two fingers always pinch and pan, and a second finger arriving mid-stroke
 rewinds the stroke it interrupted rather than smearing it.
+
+**On a desktop** the same page gets what a mouse and a keyboard can offer and a finger
+cannot. The wheel zooms about the pointer, so what you were looking at stays where it was.
+The brush shows a ring of the size it will actually paint — guessing and undoing is a poor
+substitute for seeing it, and the question does not arise on a phone because a finger
+covers the answer. `f`, `b` and `e` switch tools, `0` fits the sheet back to the window,
+and undo has a redo beside it (`⌘Z` / `⇧⌘Z`, or `Ctrl+Z` / `Ctrl+Shift+Z` — the page prints
+whichever pair your keyboard actually has). Redo is keyboard-only: it earns its place next
+to a shortcut that is easy to press twice, and not a fourth button on a phone's toolbar.
+
+Every instruction on the page is written twice and chosen at runtime, because telling a
+mouse to pinch is worse than saying nothing.
+
+**Layout.** The sheet is fitted to the stage by measurement rather than by CSS: fitting a
+fixed ratio inside a box needs both a width and a height constraint to resolve, and a
+percentage height has nothing definite to resolve against inside a flex column. It fails
+silently — the sheet simply runs off the bottom of a wide window — which is exactly how it
+shipped until a desktop screenshot showed the bottom third of the page missing. Landscape
+phones, where the palette would otherwise take half the window, stand the tools up as a
+rail beside the sheet instead.
 
 **Resolution.** The sheet is coloured at a raster sized so that even the finest pen draws a
 wall at least two pixels thick — the paper's own units are far too coarse for that, and

@@ -1119,15 +1119,18 @@ body.colouring .toast {
 }
 
 /*
- * The sheet is two layers in one box. The artwork is left in normal flow so its
- * own intrinsic size fits the box to the screen, and the paint canvas is
+ * The sheet is two layers in one box: the artwork, with the paint canvas
  * stretched over it. Being positioned would otherwise put the paint layer on
  * top of the artwork, hence the z-index on the lines.
+ *
+ * Its width is set by color.js rather than here. Fitting a fixed ratio inside a
+ * box with `max-width` and `max-height` needs both to resolve, and the height
+ * percentage has no definite container to resolve against inside a flex column
+ * — which silently does nothing and lets the sheet run off the bottom of a
+ * landscape window. One measurement is worth more than the trick.
  */
 .colour-paper {
   position: relative;
-  max-width: 100%;
-  max-height: 100%;
   line-height: 0;
   background: #fff;
   box-shadow: var(--shadow-lg);
@@ -1137,19 +1140,37 @@ body.colouring .toast {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+  /* Ignored by touch, and the right shape for every tool here: all three act on
+     a point, and the brush's own size is shown by the ring. */
+  cursor: crosshair;
 }
 .colour-paper canvas,
 .colour-paper img { display: block; }
 #colour-lines {
   position: relative;
   z-index: 1;
-  width: auto;
+  width: 100%;
   height: auto;
-  max-width: 100%;
-  max-height: 100%;
   -webkit-user-drag: none;
 }
 #colour-paint { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/*
+ * A ring showing where the brush is and how big it is, for pointers precise
+ * enough to aim with. It lives inside the sheet so the page's own transform
+ * scales it, which is what keeps it honest at every zoom level. A finger covers
+ * it entirely, so touch never sees it.
+ */
+.brush-cursor {
+  position: absolute;
+  z-index: 2;
+  aspect-ratio: 1;
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75) inset;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
 
 .colour-hint {
   position: absolute;
@@ -1178,6 +1199,16 @@ body.colouring .toast {
   border-top: 1px solid var(--line);
   background: var(--surface);
 }
+/*
+ * The bar spans the window, but its contents are held to a readable width and
+ * centred: on a wide monitor a full-width row leaves the palette at one end of
+ * the screen and Clear at the other, and the eye has to travel the whole way.
+ */
+.colour-tools > * {
+  width: 100%;
+  max-width: 1180px;
+  margin-inline: auto;
+}
 
 /*
  * Two rows of swatches that scroll sideways, rather than a grid that wraps: a
@@ -1188,6 +1219,9 @@ body.colouring .toast {
   display: grid;
   grid-auto-flow: column;
   grid-template-rows: repeat(2, auto);
+  /* Centred where the whole palette fits, which is most desktops; where it does
+     not, it starts at the left edge and scrolls. */
+  justify-content: safe center;
   gap: 8px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -1219,6 +1253,57 @@ body.colouring .toast {
 .tool-seg button { display: inline-flex; align-items: center; gap: 6px; }
 
 .brush-size { flex: 1 1 90px; max-width: 190px; display: flex; align-items: center; }
+
+.colour-shortcuts { margin: 0; white-space: nowrap; }
+/* No keyboard to press them on, and the row is full without them. */
+@media (max-width: 900px), (pointer: coarse) {
+  .colour-shortcuts { display: none; }
+}
+
+/*
+ * Landscape phones and small landscape tablets: there is width to spare and
+ * almost no height, so the tools stand up as a rail beside the sheet. Left as a
+ * bottom bar they take half the window and the sheet shrinks to a postage
+ * stamp — the one thing this page exists to show.
+ */
+@media (max-height: 560px) and (min-width: 620px) {
+  .colour-app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .colour-bar { grid-column: 1 / -1; }
+
+  .colour-tools {
+    grid-template-rows: minmax(0, 1fr) auto;
+    width: auto;
+    max-width: 44vw;
+    padding: 8px;
+    border-top: 0;
+    border-left: 1px solid var(--line);
+  }
+  .colour-tools > * { width: auto; max-width: none; }
+
+  /* Two columns that scroll downwards, keeping each family's pair side by side
+     exactly as the wide layout keeps them one above the other. */
+  .swatches {
+    grid-auto-flow: row;
+    grid-template-rows: none;
+    grid-template-columns: repeat(2, auto);
+    align-content: start;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .tool-row { flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .tool-row .spacer { display: none; }
+  .tool-seg { flex: 1 1 100%; justify-content: center; }
+  .brush-size { flex: 1 1 100%; max-width: none; }
+  /* Every pixel the rail gives up is a pixel of sheet, and this is the widest
+     thing in it by some way. */
+  .tool-seg button span { display: none; }
+  .tool-seg button { padding: 9px 12px; }
+}
 
 @media (max-width: 560px) {
   .colour-bar { padding: 6px 8px; }

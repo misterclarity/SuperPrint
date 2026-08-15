@@ -35,6 +35,7 @@ const els = {
   brushSize: document.getElementById('brush-size'),
   brushRange: document.getElementById('brush-range'),
   undo: document.getElementById('colour-undo'),
+  shortcuts: document.getElementById('colour-shortcuts'),
   clear: document.getElementById('colour-clear'),
   back: document.getElementById('colour-back'),
   save: document.getElementById('colour-save'),
@@ -64,10 +65,33 @@ const PALETTE = [
 ];
 const COLOURS = PALETTE.flat();
 
+/*
+ * Two sets of words, because the instructions are only useful if they name the
+ * gesture the reader actually has. Telling a mouse to pinch is worse than
+ * saying nothing.
+ */
 const TOOLS = [
-  { id: 'fill', label: 'Fill', icon: 'bucket', hint: 'Tap an area to fill it · pinch to zoom' },
-  { id: 'brush', label: 'Brush', icon: 'brush', hint: 'Drag to colour · two fingers to zoom' },
-  { id: 'eraser', label: 'Eraser', icon: 'eraser', hint: 'Drag to rub colour out' },
+  {
+    id: 'fill',
+    label: 'Fill',
+    icon: 'bucket',
+    touch: 'Tap an area to fill it · pinch to zoom',
+    mouse: 'Click an area to fill it · scroll to zoom',
+  },
+  {
+    id: 'brush',
+    label: 'Brush',
+    icon: 'brush',
+    touch: 'Drag to colour · two fingers to zoom',
+    mouse: 'Drag to colour · scroll to zoom',
+  },
+  {
+    id: 'eraser',
+    label: 'Eraser',
+    icon: 'eraser',
+    touch: 'Drag to rub colour out',
+    mouse: 'Drag to rub colour out',
+  },
 ];
 
 /* --------------------------------------------------------------- state -- */
@@ -86,6 +110,10 @@ let brushStep = 3;
 
 const paintCtx = els.paint.getContext('2d', { willReadFrequently: true });
 const view = { scale: 1, x: 0, y: 0 };
+
+// Decides the wording of every instruction on the page, and whether a brush
+// ring is worth drawing.
+const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
 
 function paramsFromURL() {
   const q = new URLSearchParams(window.location.search);
@@ -123,17 +151,24 @@ function workingSize() {
 const UNDO_STEPS = 24;
 const UNDO_BYTES = 24 * 1024 * 1024;
 const undoStack = [];
-let undoBytes = 0;
+const redoStack = [];
+
+function bytes(stack) {
+  return stack.reduce((n, s) => n + s.img.data.length, 0);
+}
+
+function trim(stack) {
+  while (stack.length > UNDO_STEPS || bytes(stack) > UNDO_BYTES) stack.shift();
+}
 
 function pushUndo(box, img) {
   const snap = img || paintCtx.getImageData(
     box.x0, box.y0, box.x1 - box.x0 + 1, box.y1 - box.y0 + 1,
   );
   undoStack.push({ x: box.x0, y: box.y0, img: snap });
-  undoBytes += snap.data.length;
-  while (undoStack.length > UNDO_STEPS || undoBytes > UNDO_BYTES) {
-    undoBytes -= undoStack.shift().img.data.length;
-  }
+  trim(undoStack);
+  // Drawing something new forks the history; there is no longer a "forward".
+  redoStack.length = 0;
   paintUndoState();
 }
 
@@ -141,14 +176,26 @@ function paintUndoState() {
   els.undo.disabled = undoStack.length === 0;
 }
 
-function undo() {
-  const step = undoStack.pop();
-  if (!step) return;
-  undoBytes -= step.img.data.length;
-  paintCtx.putImageData(step.img, step.x, step.y);
+/**
+ * Move one step between the two stacks, swapping in what is on screen now.
+ *
+ * Undo and redo are the same operation in opposite directions — put back the
+ * rectangle this step holds, and keep what was there so the other direction can
+ * put *that* back. Neither goes through pushUndo, which would clear the very
+ * stack being walked.
+ */
+function step(from, to) {
+  const s = from.pop();
+  if (!s) return;
+  to.push({ x: s.x, y: s.y, img: paintCtx.getImageData(s.x, s.y, s.img.width, s.img.height) });
+  trim(to);
+  paintCtx.putImageData(s.img, s.x, s.y);
   paintUndoState();
   scheduleSave();
 }
+
+const undo = () => step(undoStack, redoStack);
+const redo = () => step(redoStack, undoStack);
 
 /** A copy of part of a full-sheet snapshot, for the undo stack. */
 function crop(src, box) {
@@ -169,7 +216,7 @@ function fillAt(pt) {
   // A tap that lands on a line has no region to fill. Saying so is better than
   // appearing to do nothing, because the alternative reading is "it's broken".
   if (!hit) {
-    toast('That is a line — tap inside an area');
+    toast(`That is a line — ${finePointer.matches ? 'click' : 'tap'} inside an area`);
     return;
   }
 
@@ -275,6 +322,50 @@ function toSheet(e) {
   };
 }
 
+/*
+ * A mouse can be aimed, so it gets shown what it is about to do: a ring the
+ * size of the brush that is about to paint. Guessing and undoing is a poor
+ * substitute for seeing it, and on a phone the question does not arise because
+ * a finger covers the answer.
+ */
+let ring = null;
+
+function showRing(pt) {
+  if (!finePointer.matches || tool === 'fill' || !ready) return hideRing();
+  if (!ring) {
+    ring = document.createElement('div');
+    ring.className = 'brush-cursor';
+    els.paper.appendChild(ring);
+  }
+  // Percentages of the sheet, so the page's own transform scales the ring with
+  // everything else and it stays true at any zoom.
+  ring.style.width = `${((brushRadius() * 2) / W) * 100}%`;
+  ring.style.left = `${(pt.x / W) * 100}%`;
+  ring.style.top = `${(pt.y / H) * 100}%`;
+  ring.hidden = false;
+}
+
+function hideRing() {
+  if (ring) ring.hidden = true;
+}
+
+/**
+ * Fit the sheet to whatever room the stage has.
+ *
+ * Measured rather than left to CSS: a fixed ratio fitted inside a box needs
+ * both a width and a height constraint to resolve, and a percentage height has
+ * nothing definite to resolve against inside a flex column. It fails silently
+ * — the sheet simply runs off the bottom of a wide window — so this does the
+ * arithmetic instead of trusting the cascade with it.
+ */
+function fitPaper() {
+  const cs = getComputedStyle(els.stage);
+  const availW = els.stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const availH = els.stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const width = Math.max(80, Math.min(availW, availH * (page.w / page.h)));
+  els.paper.style.width = `${Math.floor(width)}px`;
+}
+
 function applyView() {
   els.paper.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
   els.reset.hidden = view.scale <= 1.01;
@@ -283,8 +374,8 @@ function applyView() {
 function clampView() {
   view.scale = Math.min(8, Math.max(1, view.scale));
   const stage = els.stage.getBoundingClientRect();
-  const w = els.lines.offsetWidth * view.scale;
-  const h = els.lines.offsetHeight * view.scale;
+  const w = els.paper.offsetWidth * view.scale;
+  const h = els.paper.offsetHeight * view.scale;
   const maxX = Math.max(0, (w - stage.width) / 2 + 20);
   const maxY = Math.max(0, (h - stage.height) / 2 + 20);
   view.x = Math.min(maxX, Math.max(-maxX, view.x));
@@ -356,6 +447,7 @@ function onPointerDown(e) {
 }
 
 function onPointerMove(e) {
+  if (e.pointerType === 'mouse') showRing(toSheet(e));
   if (!pointers.has(e.pointerId)) return;
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
@@ -558,8 +650,10 @@ function setTool(id) {
   tool = id;
   els.tools.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tool === id)));
   els.brushSize.hidden = id === 'fill';
+  els.paper.dataset.tool = id;
+  hideRing();
   const t = TOOLS.find((x) => x.id === id);
-  if (t && els.hint.dataset.done !== '1') els.hint.textContent = t.hint;
+  if (t && els.hint.dataset.done !== '1') els.hint.textContent = finePointer.matches ? t.mouse : t.touch;
 }
 
 function buildTools() {
@@ -572,6 +666,23 @@ function buildTools() {
     b.addEventListener('click', () => setTool(t.id));
     els.tools.appendChild(b);
   }
+}
+
+/*
+ * Naming the modifier the reader's own keyboard has. "Ctrl+Z" on a Mac is not a
+ * shortcut, it is a wrong answer, and this is the only place on the site that
+ * needs a modifier at all.
+ */
+function writeShortcuts() {
+  const mac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgentData?.platform || navigator.platform || navigator.userAgent);
+  // Each platform's own way of writing it — symbols stacked on a Mac, words
+  // joined by plus signs everywhere else.
+  const undoKey = mac ? '⌘Z' : 'Ctrl+Z';
+  const redoKey = mac ? '⇧⌘Z' : 'Ctrl+Shift+Z';
+  els.shortcuts.innerHTML = [
+    ['f', 'fill'], ['b', 'brush'], ['e', 'eraser'], [undoKey, 'undo'], [redoKey, 'redo'],
+  ].map(([key, what]) => `<span class="mono">${key}</span> ${what}`).join(' · ');
+  els.undo.title = `Undo (${undoKey})`;
 }
 
 function dismissHint() {
@@ -588,6 +699,9 @@ async function start() {
   H = size.h;
   els.paint.width = W;
   els.paint.height = H;
+  // Before the artwork arrives, so the sheet has its final size from the first
+  // frame rather than snapping into place once the SVG decodes.
+  fitPaper();
 
   els.titleEl.textContent = `${getStyle(params.style).name} · ${params.seed}`;
   document.title = `Colour ${title(params)} — SuperPrint`;
@@ -600,6 +714,7 @@ async function start() {
 
   buildSwatches();
   buildTools();
+  writeShortcuts();
   paintUndoState();
 
   /*
@@ -622,6 +737,8 @@ async function start() {
   lineAlpha = alphaChannel(offCtx.getImageData(0, 0, W, H).data, W, H);
 
   if (await restoreWork()) toast('Picked up where you left off');
+  setTool(tool);
+  fitPaper();
   applyView();
   ready = true;
 
@@ -631,14 +748,21 @@ async function start() {
   els.paper.addEventListener('pointercancel', onPointerUp);
   els.stage.addEventListener('wheel', onWheel, { passive: false });
 
-  els.brushRange.addEventListener('input', () => { brushStep = parseInt(els.brushRange.value, 10); });
+  els.paper.addEventListener('pointerleave', hideRing);
+  els.brushRange.addEventListener('input', () => {
+    brushStep = parseInt(els.brushRange.value, 10);
+    // Resize the ring in place, so the slider shows its effect without a drag.
+    if (ring && !ring.hidden) ring.style.width = `${((brushRadius() * 2) / W) * 100}%`;
+  });
   els.undo.addEventListener('click', undo);
   els.clear.addEventListener('click', clearAll);
   els.reset.addEventListener('click', resetView);
   els.save.addEventListener('click', saveColoured);
   els.print.addEventListener('click', printColoured);
 
-  window.addEventListener('resize', () => { clampView(); applyView(); });
+  const relayout = () => { fitPaper(); clampView(); applyView(); };
+  window.addEventListener('resize', relayout);
+  window.addEventListener('orientationchange', relayout);
   // A backgrounded tab may never come back, so bank the work now rather than
   // waiting out the debounce.
   document.addEventListener('visibilitychange', () => {
@@ -648,7 +772,10 @@ async function start() {
   document.addEventListener('keydown', (e) => {
     const tag = document.activeElement && document.activeElement.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
+    const mod = e.metaKey || e.ctrlKey;
+    if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); (e.shiftKey ? redo : undo)(); }
+    else if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
+    else if (mod) { /* leave every other shortcut to the browser */ }
     else if (e.key === 'f') setTool('fill');
     else if (e.key === 'b') setTool('brush');
     else if (e.key === 'e') setTool('eraser');

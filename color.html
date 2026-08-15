@@ -70,7 +70,11 @@
 
       <span class="spacer"></span>
 
-      <button class="btn btn-outline btn-icon" id="colour-undo" type="button" aria-label="Undo" title="Undo" disabled></button>
+      <!-- Filled in by color.js, which knows whether to say Ctrl or ⌘. Shown
+           only where there is a keyboard to use them on. -->
+      <p class="small muted colour-shortcuts" id="colour-shortcuts"></p>
+
+      <button class="btn btn-outline btn-icon" id="colour-undo" type="button" aria-label="Undo" title="Undo (Ctrl+Z)" disabled></button>
       <button class="btn btn-outline btn-sm" id="colour-clear" type="button">Clear</button>
     </div>
   </div>
