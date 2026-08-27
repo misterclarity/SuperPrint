@@ -8,6 +8,7 @@ import stainedglass from './stainedglass.js';
 import celtic from './celtic.js';
 import folkweave from './folkweave.js';
 import fractal from './fractal.js';
+import flowfield from './flowfield.js';
 import bands from './bands.js';
 import contours from './contours.js';
 
@@ -20,6 +21,7 @@ export const STYLES = [
   frostfield,
   folkweave,
   fractal,
+  flowfield,
   animals,
   celtic,
   bands,

@@ -9,8 +9,8 @@ drop-in fit for GitHub Pages.
 
 ## Features
 
-- **Twelve drawing styles** — Mandala, Kaleidoscope, Stained Glass, Botanical Wreath,
-  Bloom Field, Frost Field, Folk Weave, Fractal Forms, Animals, Celtic Weave,
+- **Thirteen drawing styles** — Mandala, Kaleidoscope, Stained Glass, Botanical Wreath,
+  Bloom Field, Frost Field, Folk Weave, Fractal Forms, Flow Field, Animals, Celtic Weave,
   Pattern Bands and Contour Map.
 - **Reproducible seeds.** A design is a pure function of `(style, seed, settings)`, so the
   same inputs always redraw the identical page. Seeds are human-readable
@@ -105,6 +105,53 @@ subpath (`user.github.io/SuperPrint/`) as well as from a custom domain.
 max-age=600`, so a browser can hold the old CSS and JavaScript for up to ten minutes, and
 the service worker will have cached whatever it was given. Loading the site in a private
 window bypasses both.
+
+## Flow Field, and what this borrows from p5.js
+
+Flow Field is the one style taken from somewhere else: the flow field is *the* p5.js
+sketch. Build a field of directions out of noise, drop particles in, draw their trails.
+
+It is also, written that way, the worst possible colouring page. A thousand open trails
+enclose nothing, and a page with nothing enclosed has nowhere to put a pencil. So the
+trails are the armature here rather than the drawing: each becomes a ribbon — a closed
+outline tapering to a point at both ends, divided across its width into cells. You colour
+the cells; what makes the page worth colouring is that a hundred separate shapes have all
+been combed by the same field, so they lean the same way and swirl around the same centres.
+Between 52 and 463 cells per sheet, with a median cell running from about 9mm square at
+*Easy* down to 4mm at *Intricate*.
+
+Four things had to be true before it was a page rather than a demo, and each was found by
+looking at what came out rather than by reasoning about it:
+
+- **A streamline has to give way to itself.** Inside a vortex the field turns fast enough
+  that a line spirals inward forever without leaving the sheet or meeting anything else,
+  laying hundreds of coils into a space a few units across. The first renders had solid
+  black discs where the swirls should have been.
+- **A ribbon cannot be wider than the turn it goes round.** Offsetting further than the
+  radius of curvature folds the inner edge back through itself — a spike sticking out of a
+  smooth ribbon, and a region whose outline crosses itself. It narrows into hard turns
+  instead, which is also what a loaded brush does.
+- **Seeds have to grow from what is already drawn.** A grid of seeds leaves bald patches
+  and then makes them permanent, because a ribbon stops when it nears an existing one, so
+  wherever the grid missed, nothing ever fills. Every accepted ribbon now proposes new
+  seeds a lane out along its own flanks.
+- **Tracing resolution is not drawing resolution.** Emitting a curve segment per traced
+  point made pages of three-quarters of a megabyte, ten times any other style, for a shape
+  indistinguishable from the 13–140KB it takes now.
+
+**p5.js itself is not a dependency, and should not become one.** It is a canvas library:
+adopting it would trade this site's vector output — the SVG download, the 300 DPI export,
+the print path — for a raster, break the "no build step, no dependencies" property that
+makes the repository a drop-in for Pages, and take the generators out of reach of a test
+suite that renders them in Node with no browser at all. What is worth having from p5 is its
+vocabulary, and that is what was taken.
+
+Most of that vocabulary was already here under other names. p5 2.0's headline shape change
+renamed `curveVertex` to `splineVertex` and made it pass through every point by default;
+`smooth()` in `core/util.js` has always been that same Catmull-Rom-to-Bézier conversion.
+The one real gap was `noise()`, so `core/noise.js` is now a seeded Perlin field with p5's
+`noiseDetail` octaves and falloff as options — reproducible from the page's seed like
+everything else, and available to every generator, not just this one.
 
 ## Colouring
 
@@ -205,6 +252,7 @@ color.html                                            colouring mode
 sw.js  manifest.webmanifest                           offline and installation
 assets/js/core/   rng · sketch · shapes · render · export · store
                   path · clip · layer · quality   (geometry and composition)
+                  noise                           (seeded gradient noise)
                   paint                           (the flood fill)
 assets/js/gen/    one module per drawing style
 assets/js/pages/  per-page controllers
