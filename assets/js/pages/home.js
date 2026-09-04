@@ -46,6 +46,28 @@ function paintHero() {
   }
 }
 
+/*
+ * Say how many styles there are by counting them.
+ *
+ * The number appeared twice in the markup and was wrong within a day of a
+ * style being added — the same rot as any hand-kept list. The HTML still
+ * carries the right words so the page reads correctly before this runs; this
+ * is what stops it from ever being wrong again.
+ */
+const NUMBER_WORDS = [
+  'No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+  'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen',
+  'Eighteen', 'Nineteen', 'Twenty',
+];
+
+function paintStyleCount() {
+  const n = STYLES.length;
+  const stat = document.querySelector('[data-style-count]');
+  if (stat) stat.textContent = String(n);
+  const heading = document.querySelector('[data-style-count-word]');
+  if (heading) heading.textContent = `${NUMBER_WORDS[n] || n} ways to fill a page`;
+}
+
 function paintShowcase() {
   if (!showcase) return;
   const rng = makeRng(randomSeed());
@@ -93,5 +115,6 @@ if (startBtn) {
   startBtn.href = studioURL({ style: 'mandala', seed: randomSeed(), complexity: 3 });
 }
 
+paintStyleCount();
 paintHero();
 paintShowcase();
